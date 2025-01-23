@@ -144,7 +144,10 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     @Override
     public void clear() {
-        System.out.println("H2Opt clear");
+        // 删除表的数据
+        StringBuilder sql = new StringBuilder("truncate table ").append(tableName).append(";");
+        log.info("清空表的sql: {}", sql);
+        DBUtil.executeSql(dataSource, sql.toString());
     }
 
     @Override
@@ -175,6 +178,36 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     @Override
     public T set(int index, T element) {
-        return null;
+        // 查出原有的数据的id，然后进行更新
+        Long id = null;
+        StringBuilder sql = new StringBuilder("select ").append(pkColumnName).append(" from ")
+                .append(tableName).append(" order by ").append(pkColumnName).append(" limit 1 offset ").append(index).append(";");
+        log.info("查询数据的id的sql: {}", sql);
+        id = DBUtil.querySingle(dataSource, sql.toString(), Lists.newArrayList(new LocalColumn(pkColumnName, Long.class, "BIGINT", null)), Long.class);
+        if (id == null) {
+            throw new RuntimeException("没有找到对应的数据");
+        }
+        // 拼接sql
+        sql = new StringBuilder("update ").append(tableName).append(" set ");
+        for (LocalColumn column : columns) {
+            if (column.getField() == null && columns.size() == 1) {
+                sql.append(column.getColumnName()).append(" = '").append(element).append("', ");
+            } else {
+                Object value = null;
+                column.getField().setAccessible(true);
+                try {
+                    value = column.getField().get(element);
+                } catch (IllegalAccessException e) {
+                    throw new RuntimeException(e);
+                }
+                sql.append(column.getColumnName()).append(" = '").append(value).append("', ");
+            }
+        }
+        sql.setLength(sql.length() - 2);
+        sql.append(" where ").append(pkColumnName).append(" = ").append(id).append(";");
+        log.info("更新数据的sql: {}", sql);
+        // 执行sql
+        DBUtil.executeSql(dataSource, sql.toString());
+        return element;
     }
 }
