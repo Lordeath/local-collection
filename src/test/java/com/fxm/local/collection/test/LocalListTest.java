@@ -1,11 +1,13 @@
 package com.fxm.local.collection.test;
 
 import com.fxm.local.collection.LocalList;
+import com.fxm.local.collection.LocalMap;
 import com.google.common.collect.Lists;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.reflect.FieldUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -18,7 +20,8 @@ public class LocalListTest {
             list.add("b");
             assertEquals(2, list.size());
             assertEquals("a", list.get(0));
-            assertEquals("b", list.get(1));   }
+            assertEquals("b", list.get(1));
+        }
         try (LocalList<TestBean1> list = new LocalList<>()) {
             list.add(new TestBean1("Jack", 26));
             list.add(new TestBean1("Rose", 25));
@@ -27,6 +30,18 @@ public class LocalListTest {
             assertEquals(26, list.get(0).age);
             assertEquals("Rose", list.get(1).name);
             assertEquals(25, list.get(1).age);
+
+            // 创建Map，key是userId，value是UserOrderStats对象
+            try (LocalMap<String, TestBean1> map = LocalMap.from(list)
+                    .where("age >= '26'")
+                    .groupBy("name")
+                    .select(TestBean1.class)  // 指定结果类型
+                    .keyField(FieldUtils.getDeclaredField(TestBean1.class, "name", true))
+                    .build()) {
+                System.out.println(map.get("Jack"));
+                System.out.println(map.get("Rose"));
+            }
+
         }
 
         try (LocalList<String> list = new LocalList<>(String.class)) {

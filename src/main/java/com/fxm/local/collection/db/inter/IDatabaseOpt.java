@@ -1,5 +1,7 @@
 package com.fxm.local.collection.db.inter;
 
+import com.fxm.local.collection.db.bean.LocalColumn;
+
 import java.util.Collection;
 import java.util.List;
 
@@ -22,10 +24,90 @@ public interface IDatabaseOpt<T> {
     long pk(int index);
 
     /**
-     * 批量查询指定范围的数据
-     * @param fromIndex 起始索引（包含）
-     * @param toIndex 结束索引（不包含）
+     * 批量查询
+     * @param fromIndex 开始索引
+     * @param toIndex 结束索引
      * @return 查询结果列表
      */
     List<T> batchQuery(int fromIndex, int toIndex);
+
+    /**
+     * 获取表名
+     * @return 表名
+     */
+    String getTableName();
+
+    /**
+     * 创建一个新表，用于存储分组后的数据
+     * @param newTableName 新表名
+     * @param groupByColumns 分组字段
+     * @param whereClause 过滤条件
+     * @param keyColumn 键列名
+     * @param resultColumns 结果列
+     * @return 是否创建成功
+     */
+    boolean createGroupedTable(String newTableName, List<String> groupByColumns, 
+                             String whereClause, String keyColumn, List<LocalColumn> resultColumns);
+
+    /**
+     * 将数据从源表插入到目标表
+     * @param sourceTableName 源表名
+     * @param targetTableName 目标表名
+     * @param groupByColumns 分组字段
+     * @param whereClause 过滤条件
+     * @param keyColumn 键列名
+     * @param resultColumns 结果列
+     * @return 是否插入成功
+     */
+    boolean insertGroupedData(String sourceTableName, String targetTableName,
+                            List<String> groupByColumns, String whereClause,
+                            String keyColumn, List<LocalColumn> resultColumns);
+
+    /**
+     * 根据key查询单个对象
+     * @param keyColumn key列名
+     * @param keyValue key值
+     * @return 查询结果
+     */
+    T getByKey(String keyColumn, Object keyValue);
+
+    /**
+     * 根据key删除对象
+     * @param keyColumn key列名
+     * @param keyValue key值
+     * @return 是否删除成功
+     */
+    boolean removeByKey(String keyColumn, Object keyValue);
+
+    /**
+     * 获取所有的key值
+     * @param keyColumn key列名
+     * @return key值列表
+     */
+    List<String> getAllKeys(String keyColumn);
+
+    /**
+     * 创建索引
+     * @param indexName 索引名
+     * @param columnName 列名
+     * @return 是否创建成功
+     */
+    boolean createIndex(String indexName, String columnName);
+
+    /**
+     * 使用指定的列定义创建表
+     * @param tableName 表名
+     * @param columns 列定义
+     * @return 是否创建成功
+     */
+    boolean createTable(String tableName, List<LocalColumn> columns);
+
+    /**
+     * 使用指定的列定义插入数据
+     * @param tableName 表名
+     * @param value 要插入的值
+     * @param columns 列定义
+     * @return 是否插入成功
+     */
+    boolean insert(String tableName, Object value, List<LocalColumn> columns);
 }

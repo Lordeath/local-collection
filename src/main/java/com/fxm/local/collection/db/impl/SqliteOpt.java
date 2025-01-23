@@ -5,6 +5,7 @@ import com.fxm.local.collection.db.config.SqliteConfig;
 import com.fxm.local.collection.db.inter.IDatabaseOpt;
 import com.fxm.local.collection.db.util.ColumnNameUtil;
 import com.fxm.local.collection.db.util.DBUtil;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
@@ -18,6 +19,7 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     private final DataSource dataSource;
     // 操作的表名
+    @Getter
     private final String tableName;
     private final String pkColumnName;
     private final List<LocalColumn> columns;
@@ -46,6 +48,26 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
         log.info("数据源初始化完毕: {} {}", dataSource, tableName);
     }
 
+    public SqliteOpt(Class<T> clazz, String tableName, List<LocalColumn> columns) {
+        this.clazz = clazz;
+        this.tableName = tableName;
+        this.columns = columns;
+        dataSource = SqliteConfig.getDataSource();
+        log.info("开始初始化数据源: {} {}", dataSource, tableName);
+        // 创建表
+        StringBuilder sql = new StringBuilder("create table ").append(tableName)
+                .append(" (");
+        for (LocalColumn column : columns) {
+            sql.append(column.getColumnName()).append(" ").append(column.getDbType()).append(", ");
+        }
+        sql.delete(sql.length() - 2, sql.length());
+        sql.append(");");
+        log.info("创建表的sql: {}", sql);
+        // 执行sql
+        DBUtil.executeSql(dataSource, sql.toString());
+        pkColumnName = null;
+        log.info("数据源初始化完毕: {} {}", dataSource, tableName);
+    }
 
     @Override
     public boolean add(T obj) {
@@ -104,4 +126,44 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
         return DBUtil.batchQuery(fromIndex, toIndex, tableName, columns, pkColumnName, dataSource, clazz);
     }
 
+
+    @Override
+    public boolean createGroupedTable(String newTableName, List<String> groupByColumns, String whereClause, String keyColumn, List<LocalColumn> resultColumns) {
+        return DBUtil.createGroupedTable(dataSource, newTableName, keyColumn, resultColumns);
+    }
+
+    @Override
+    public boolean insertGroupedData(String sourceTableName, String targetTableName, List<String> groupByColumns, String whereClause, String keyColumn, List<LocalColumn> resultColumns) {
+        return DBUtil.insertGroupedData(dataSource, sourceTableName, targetTableName, groupByColumns, whereClause, keyColumn, resultColumns);
+    }
+
+    @Override
+    public T getByKey(String keyColumn, Object keyValue) {
+        return DBUtil.getByKey(dataSource, tableName, keyColumn, keyValue, columns, clazz);
+    }
+
+    @Override
+    public boolean removeByKey(String keyColumn, Object keyValue) {
+        return DBUtil.removeByKey(dataSource, tableName, keyColumn, keyValue);
+    }
+
+    @Override
+    public List<String> getAllKeys(String keyColumn) {
+        return DBUtil.getAllKeys(dataSource, tableName, keyColumn);
+    }
+
+    @Override
+    public boolean createIndex(String indexName, String columnName) {
+        return DBUtil.createIndex(dataSource, tableName, indexName, columnName);
+    }
+
+    @Override
+    public boolean createTable(String tableName, List<LocalColumn> columns) {
+        return DBUtil.createTable(dataSource, tableName, columns);
+    }
+
+    @Override
+    public boolean insert(String tableName, Object value, List<LocalColumn> columns) {
+        return DBUtil.insert(dataSource, tableName, value, columns);
+    }
 }

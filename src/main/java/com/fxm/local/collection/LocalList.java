@@ -1,11 +1,14 @@
 package com.fxm.local.collection;
 
+import com.fxm.local.collection.db.bean.LocalColumn;
+import com.fxm.local.collection.db.factory.DatabaseFactory;
 import com.fxm.local.collection.db.impl.DerbyOpt;
 import com.fxm.local.collection.db.impl.H2Opt;
 import com.fxm.local.collection.db.impl.HSQLDBOpt;
 import com.fxm.local.collection.db.impl.SqliteOpt;
 import com.fxm.local.collection.db.inter.IDatabaseOpt;
 import com.fxm.local.collection.db.util.DBUtil;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -24,7 +27,10 @@ import static com.fxm.local.collection.db.config.MainConfig.CONST_DB_ENGINE;
 @Slf4j
 public class LocalList<T> implements AutoCloseable, List<T> {
 
+    @Getter
     private IDatabaseOpt<T> databaseOpt;
+    private Class<T> clazz;
+    private List<LocalColumn> columns;
 
     public LocalList(Class<T> clazz) {
         init(clazz);
@@ -43,6 +49,23 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         } else {
             throw new IllegalArgumentException("其他的数据库暂时不支持: " + dbEngine);
         }
+    }
+
+    /**
+     * 使用指定的列定义创建LocalList
+     * @param clazz 元素类型
+     * @param tableName 表名
+     * @param columns 列定义
+     */
+    public LocalList(Class<T> clazz, String tableName, List<LocalColumn> columns) {
+        this.clazz = clazz;
+        this.columns = columns;
+        
+        // 创建数据库操作对象
+        this.databaseOpt = DatabaseFactory.createDatabaseOpt(clazz, tableName, columns);
+        
+//        // 创建表
+//        databaseOpt.createTable(tableName, columns);
     }
 
     public LocalList() {

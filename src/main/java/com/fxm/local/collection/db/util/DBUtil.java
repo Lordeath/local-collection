@@ -7,13 +7,12 @@ import lombok.extern.slf4j.Slf4j;
 import javax.sql.DataSource;
 import java.lang.reflect.Field;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class DBUtil {
@@ -105,7 +104,7 @@ public class DBUtil {
     }
 
     public static <T> List<T> batchQuery(int fromIndex, int toIndex, String tableName, List<LocalColumn> columns,
-                                       String pkColumnName, DataSource dataSource, Class<T> clazz) {
+                                         String pkColumnName, DataSource dataSource, Class<T> clazz) {
         // 通过主键进行排序，然后使用 LIMIT 和 OFFSET 进行批量查询
         StringBuilder sql = new StringBuilder("select * from ")
                 .append(tableName)
@@ -115,14 +114,14 @@ public class DBUtil {
                 .append(toIndex - fromIndex)
                 .append(" offset ")
                 .append(fromIndex);
-        
+
         log.info("批量查询数据的sql: {}", sql);
-        
+
         List<T> result = new ArrayList<>();
         try (Connection connection = dataSource.getConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(sql.toString())) {
-            
+
             while (resultSet.next()) {
                 T obj = clazz.getDeclaredConstructor().newInstance();
                 for (LocalColumn column : columns) {
@@ -277,5 +276,278 @@ public class DBUtil {
             throw new RuntimeException("没有找到对应的数据");
         }
         return id;
+    }
+
+    private static void setParameters(PreparedStatement stmt, Object... params) throws SQLException {
+        for (int i = 0; i < params.length; i++) {
+            stmt.setObject(i + 1, params[i]);
+        }
+    }
+
+    private static <T> T createInstance(ResultSet rs, List<LocalColumn> columns, Class<T> clazz)
+            throws Exception {
+        T obj = clazz.getDeclaredConstructor().newInstance();
+        for (LocalColumn column : columns) {
+            if (column.getField() != null) {
+                column.getField().setAccessible(true);
+                Object value = rs.getObject(column.getColumnName());
+                if (value != null) {
+                    column.getField().set(obj, value);
+                }
+            }
+        }
+        return obj;
+    }
+
+    public static boolean createGroupedTable(DataSource dataSource, String tableName,
+                                             String keyColumn, List<LocalColumn> resultColumns) {
+        StringBuilder createTableSql = new StringBuilder();
+        createTableSql.append("CREATE TABLE ").append(tableName).append(" (");
+
+        // 添加key列定义
+        createTableSql.append(keyColumn).append(" VARCHAR PRIMARY KEY");
+
+        // 添加其他列定义
+        for (LocalColumn column : resultColumns) {
+            if (column.getColumnName().equals(keyColumn)) {
+                continue;
+            }
+            String sqlType = getSqlType(column.getField().getType());
+            createTableSql.append(", ")
+                    .append(column.getColumnName())
+                    .append(" ")
+                    .append(sqlType);
+        }
+
+        createTableSql.append(")");
+
+        log.debug("Creating table with SQL: {}", createTableSql);
+
+        try (Connection connection = dataSource.getConnection();
+             Statement stmt = connection.createStatement()) {
+            // 创建表
+            stmt.execute(createTableSql.toString());
+
+            // 创建索引
+            String createIndexSql = String.format(
+                    "CREATE INDEX idx_%s ON %s(%s)",
+                    keyColumn, tableName, keyColumn
+            );
+            stmt.execute(createIndexSql);
+
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to create table: {}\ncreateTableSql: \n{}", createTableSql, e.getMessage());
+            throw new RuntimeException("Failed to create table", e);
+        }
+    }
+
+    public static String getSqlType(Class<?> javaType) {
+        if (String.class.equals(javaType)) {
+            return "VARCHAR";
+        } else if (Integer.class.equals(javaType) || int.class.equals(javaType)) {
+            return "INTEGER";
+        } else if (Long.class.equals(javaType) || long.class.equals(javaType)) {
+            return "BIGINT";
+        } else if (Double.class.equals(javaType) || double.class.equals(javaType)) {
+            return "DOUBLE";
+        } else if (Float.class.equals(javaType) || float.class.equals(javaType)) {
+            return "FLOAT";
+        } else if (Boolean.class.equals(javaType) || boolean.class.equals(javaType)) {
+            return "BOOLEAN";
+        } else if (Date.class.equals(javaType)) {
+            return "TIMESTAMP";
+        }
+        return "VARCHAR(255)"; // 默认类型
+    }
+
+    public static boolean insertGroupedData(DataSource dataSource, String sourceTableName,
+                                            String targetTableName, List<String> groupByColumns,
+                                            String whereClause, String keyColumn,
+                                            List<LocalColumn> resultColumns) {
+        // 构建INSERT语句
+        StringBuilder insertSql = new StringBuilder();
+        insertSql.append("INSERT INTO ").append(targetTableName).append(" (")
+                .append(keyColumn);
+
+        resultColumns = resultColumns.stream().filter(f -> !f.getColumnName().equals(keyColumn)).collect(Collectors.toList());
+
+        for (LocalColumn column : resultColumns) {
+            insertSql.append(", ").append(column.getColumnName());
+        }
+
+        insertSql.append(") SELECT ");
+
+        // 构建SELECT子句
+        insertSql.append(String.join(" || '.' || ", groupByColumns))
+                .append(" AS ").append(keyColumn);
+
+        for (LocalColumn column : resultColumns) {
+            insertSql.append(", ").append(column.getColumnName());
+        }
+
+        insertSql.append(" FROM ").append(sourceTableName);
+
+        if (whereClause != null && !whereClause.isEmpty()) {
+            insertSql.append(" WHERE ").append(whereClause);
+        }
+
+        if (!groupByColumns.isEmpty()) {
+            insertSql.append(" GROUP BY ").append(String.join(", ", groupByColumns));
+        }
+
+        log.debug("Inserting data with SQL: {}", insertSql);
+
+        try (Connection connection = dataSource.getConnection();
+             Statement stmt = connection.createStatement()) {
+            return stmt.executeUpdate(insertSql.toString()) > 0;
+        } catch (Exception e) {
+            log.error("Failed to insert data: {}", e.getMessage());
+            throw new RuntimeException("Failed to insert grouped data", e);
+        }
+    }
+
+    public static <T> T getByKey(DataSource dataSource, String tableName, String keyColumn,
+                                 Object keyValue, List<LocalColumn> columns, Class<T> clazz) {
+        String sql = String.format("SELECT * FROM %s WHERE %s = ?", tableName, keyColumn);
+
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql)) {
+
+            setParameters(stmt, keyValue);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return createInstance(rs, columns, clazz);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to get object by key: {}", e.getMessage());
+            throw new RuntimeException("Failed to get object by key", e);
+        }
+        return null;
+    }
+
+    public static boolean removeByKey(DataSource dataSource, String tableName, String keyColumn, Object keyValue) {
+        String sql = String.format("DELETE FROM %s WHERE %s = ?", tableName, keyColumn);
+
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql)) {
+
+            setParameters(stmt, keyValue);
+            return stmt.executeUpdate() > 0;
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to remove object by key", e);
+        }
+    }
+
+    public static List<String> getAllKeys(DataSource dataSource, String tableName, String keyColumn) {
+        String sql = String.format("SELECT DISTINCT %s FROM %s", keyColumn, tableName);
+        List<String> keys = new ArrayList<>();
+
+        try (Connection connection = dataSource.getConnection();
+             Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                keys.add(rs.getString(1));
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get all keys", e);
+        }
+
+        return keys;
+    }
+
+    public static boolean createIndex(DataSource dataSource, String tableName, String indexName, String columnName) {
+        String sql = String.format("CREATE INDEX %s ON %s(%s)", indexName, tableName, columnName);
+
+        try (Connection connection = dataSource.getConnection();
+             Statement stmt = connection.createStatement()) {
+            stmt.execute(sql);
+            return true;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create index", e);
+        }
+    }
+
+    public static boolean createTable(DataSource dataSource, String tableName, List<LocalColumn> columns) {
+        StringBuilder createTableSql = new StringBuilder();
+        createTableSql.append("CREATE TABLE ").append(tableName).append(" (");
+
+        boolean first = true;
+        for (LocalColumn column : columns) {
+            if (!first) {
+                createTableSql.append(", ");
+            }
+            createTableSql.append(column.getColumnName())
+                    .append(" ")
+                    .append(column.getDbType());
+            first = false;
+        }
+
+        createTableSql.append(")");
+
+        log.debug("Creating table with SQL: {}", createTableSql);
+
+        try (Connection connection = dataSource.getConnection();
+             Statement stmt = connection.createStatement()) {
+            stmt.execute(createTableSql.toString());
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to create table: {}", e.getMessage());
+            throw new RuntimeException("Failed to create table", e);
+        }
+    }
+
+    public static boolean insert(DataSource dataSource, String tableName, Object value, List<LocalColumn> columns) {
+        StringBuilder insertSql = new StringBuilder();
+        insertSql.append("INSERT INTO ").append(tableName).append(" (");
+
+        // 构建列名部分
+        boolean first = true;
+        for (LocalColumn column : columns) {
+            if (!first) {
+                insertSql.append(", ");
+            }
+            insertSql.append(column.getColumnName());
+            first = false;
+        }
+
+        insertSql.append(") VALUES (");
+
+        // 构建参数占位符
+        first = true;
+        for (int i = 0; i < columns.size(); i++) {
+            if (!first) {
+                insertSql.append(", ");
+            }
+            insertSql.append("?");
+            first = false;
+        }
+
+        insertSql.append(")");
+
+        log.debug("Inserting data with SQL: {}", insertSql);
+
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(insertSql.toString())) {
+
+            // 设置参数值
+            int paramIndex = 1;
+            for (LocalColumn column : columns) {
+                Field field = column.getField();
+                field.setAccessible(true);
+                Object fieldValue = field.get(value);
+                stmt.setObject(paramIndex++, fieldValue);
+            }
+
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            log.error("Failed to insert data: {}", e.getMessage());
+            throw new RuntimeException("Failed to insert data", e);
+        }
     }
 }
