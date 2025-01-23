@@ -6,14 +6,7 @@ public interface IDatabaseOpt<T> {
     boolean add(T obj);
     boolean addAll(Collection<? extends T> c);
 
-    void remove(T obj);
     T remove(int index);
-
-    void update(T obj);
-
-    void query(T obj);
-
-    void queryAll();
 
     void clear();
 

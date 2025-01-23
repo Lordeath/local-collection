@@ -55,34 +55,5 @@ public class ColumnNameUtil {
             default:
                 return null;
         }
-//
-//        if (clazz.isPrimitive()) {
-//            if (clazz == int.class) {
-//                return new LocalColumn(fieldName, Integer.class, "INT", field);
-//            }
-//        }
-//
-//        if (clazz == String.class) {
-//            return new LocalColumn(fieldName, String.class, "VARCHAR", field);
-//        }
-//        if (clazz == Integer.class) {
-//            return new LocalColumn(fieldName, Integer.class, "INT", field);
-//        }
-//        if (clazz == Long.class) {
-//            return new LocalColumn(fieldName, Long.class, "BIGINT", field);
-//        }
-//        if (clazz == Double.class) {
-//            return new LocalColumn(fieldName, Double.class, "DOUBLE", field);
-//        }
-//        if (clazz == Float.class) {
-//            return new LocalColumn(fieldName, Float.class, "FLOAT", field);
-//        }
-//        if (clazz == Boolean.class) {
-//            return new LocalColumn(fieldName, Boolean.class, "BOOLEAN", field);
-//        }
-//        if (clazz == Character.class) {
-//            return new LocalColumn(fieldName, Character.class, "CHAR", field);
-//        }
-//        return null;
     }
 }

@@ -40,6 +40,18 @@ public class NormalTest {
             list.add("a");
             list.add("b");
             assertEquals(2, list.size());
+
+            list.remove(0);
+            assertEquals(1, list.size());
+            assertEquals("b", list.get(0));
+            list.remove(0);
+            assertEquals(0, list.size());
+            list.add("a");
+            list.add("b");
+            assertEquals(2, list.size());
+            list.remove(1);
+            assertEquals(1, list.size());
+            assertEquals("a", list.get(0));
         }
         try (LocalList<TestBean1> list = new LocalList<>(TestBean1.class);) {
             list.add(new TestBean1("Jack", 26));
@@ -56,6 +68,9 @@ public class NormalTest {
             list.set(1, bean1);
             assertEquals(99, list.get(1).age);
 
+            list.remove(0);
+            assertEquals(1, list.size());
+            assertEquals("Rose", list.get(0).name);
 
             list.clear();
             assertEquals(0, list.size());

@@ -13,6 +13,7 @@ import static com.fxm.local.collection.db.config.MainConfig.CONST_DB_ENGINE;
 
 /**
  * 参考的是ArrayList，但是实现方式是H2数据库或者其他数据库
+ * 注意，这个类是线程不安全的
  */
 @Slf4j
 public class LocalList<T> implements AutoCloseable, List<T> {

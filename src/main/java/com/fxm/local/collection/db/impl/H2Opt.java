@@ -14,11 +14,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * 通过操作H2来实现对数据的操作，注意，这个类是线程不安全的
+ *
+ * @param <T>
+ */
 @Slf4j
 public class H2Opt<T> implements IDatabaseOpt<T> {
 
     private final DataSource dataSource;
-    //    private final Connection connection;
     // 操作的表名
     private final String tableName;
     private final String pkColumnName;
@@ -81,9 +85,6 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     @Override
     public boolean addAll(Collection<? extends T> c) {
-//        for (T t : c) {
-//            add(t);
-//        }
         // 使用批量插入
         StringBuilder sql = new StringBuilder("insert into ").append(tableName).append(" (");
         for (LocalColumn column : columns) {
@@ -94,10 +95,10 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
         for (T t : c) {
             sql.append("(");
             for (LocalColumn column : columns) {
-                if (column.getField() == null && columns.size() == 1) {
+                if (column.getField() == null) {
                     sql.append("'").append(t).append("'").append(", ");
                 } else {
-                    Object value = null;
+                    Object value;
                     column.getField().setAccessible(true);
                     try {
                         value = column.getField().get(t);
@@ -118,28 +119,23 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
     }
 
     @Override
-    public void remove(T obj) {
-        System.out.println("H2Opt remove");
-    }
-
-    @Override
     public T remove(int index) {
-        return null;
-    }
-
-    @Override
-    public void update(T obj) {
-        System.out.println("H2Opt update");
-    }
-
-    @Override
-    public void query(T obj) {
-        System.out.println("H2Opt query");
-    }
-
-    @Override
-    public void queryAll() {
-        System.out.println("H2Opt queryAll");
+        // 通过index找到id，然后通过id进行删除
+        Long id;
+        StringBuilder sql = new StringBuilder("select ").append(pkColumnName).append(" from ")
+                .append(tableName).append(" order by ").append(pkColumnName).append(" limit 1 offset ").append(index).append(";");
+        log.info("查询数据的id的sql: {}", sql);
+        id = DBUtil.querySingle(dataSource, sql.toString(), Lists.newArrayList(new LocalColumn(pkColumnName, Long.class, "BIGINT", null)), Long.class);
+        if (id == null) {
+            throw new RuntimeException("没有找到对应的数据");
+        }
+        // 拼接sql
+        sql = new StringBuilder("delete from ").append(tableName).append(" where ").append(pkColumnName).append(" = ").append(id).append(";");
+        log.info("删除数据的sql: {}", sql);
+        T t = get(index);
+        // 执行sql
+        DBUtil.executeSql(dataSource, sql.toString());
+        return t;
     }
 
     @Override
