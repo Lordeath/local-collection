@@ -24,6 +24,14 @@ public class LocalListTest {
             }
 
 
+            assertEquals(1, list.subListInMemory(0, 1).size());
+            assertEquals(2, list.subListInMemory(0, 2).size());
+            list.add("c");
+            list.add("d");
+            assertEquals(1, list.subListInMemory(1, 2).size());
+            list.remove(2);
+            list.remove(2);
+
             list.set(1, "bb");
             assertEquals("bb", list.get(1));
 
@@ -89,6 +97,12 @@ public class LocalListTest {
             for (TestBean1 testBean1 : list) {
                 log.info("正在遍历: {}", testBean1);
             }
+            assertEquals(10000, list.subListInMemory(0, 10000).size());
+            for (TestBean1 testBean1 : list.subListInMemory(0, 10000)) {
+                log.info("正在内存遍历: {}", testBean1);
+            }
+            assertEquals(9999, list.subListInMemory(1, 10000).size());
+            assertEquals(1, list.subListInMemory(1, 10000).get(0).age);
 
             list.clear();
             assertEquals(0, list.size());

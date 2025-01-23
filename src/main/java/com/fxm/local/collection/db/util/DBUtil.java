@@ -10,6 +10,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -103,6 +104,43 @@ public class DBUtil {
         return DBUtil.querySingle(dataSource, sql.toString(), columns, clazz);
     }
 
+    public static <T> List<T> batchQuery(int fromIndex, int toIndex, String tableName, List<LocalColumn> columns,
+                                       String pkColumnName, DataSource dataSource, Class<T> clazz) {
+        // 通过主键进行排序，然后使用 LIMIT 和 OFFSET 进行批量查询
+        StringBuilder sql = new StringBuilder("select * from ")
+                .append(tableName)
+                .append(" order by ")
+                .append(pkColumnName)
+                .append(" limit ")
+                .append(toIndex - fromIndex)
+                .append(" offset ")
+                .append(fromIndex);
+        
+        log.info("批量查询数据的sql: {}", sql);
+        
+        List<T> result = new ArrayList<>();
+        try (Connection connection = dataSource.getConnection();
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(sql.toString())) {
+            
+            while (resultSet.next()) {
+                T obj = clazz.getDeclaredConstructor().newInstance();
+                for (LocalColumn column : columns) {
+                    if (column.getField() != null) {
+                        column.getField().setAccessible(true);
+                        Object value = resultSet.getObject(column.getColumnName());
+                        if (value != null) {
+                            column.getField().set(obj, value);
+                        }
+                    }
+                }
+                result.add(obj);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("批量查询数据失败", e);
+        }
+        return result;
+    }
 
     public static boolean executeSql(DataSource dataSource, String sql) {
         try (Connection connection = dataSource.getConnection();

@@ -101,4 +101,9 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
         return DBUtil.pk(index, tableName, pkColumnName, dataSource);
     }
 
+    @Override
+    public List<T> batchQuery(int fromIndex, int toIndex) {
+        return DBUtil.batchQuery(fromIndex, toIndex, tableName, columns, pkColumnName, dataSource, clazz);
+    }
+
 }

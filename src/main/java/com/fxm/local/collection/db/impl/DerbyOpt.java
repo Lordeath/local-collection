@@ -10,6 +10,9 @@ import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.*;
 
 /**
@@ -115,7 +118,7 @@ public class DerbyOpt<T> implements IDatabaseOpt<T> {
 //        Long id = pk(index, tableName, pkColumnName, dataSource);
         Long id = pk(index);
         // 拼接sql
-        StringBuilder   sql = new StringBuilder("update ").append(tableName).append(" set ");
+        StringBuilder sql = new StringBuilder("update ").append(tableName).append(" set ");
         for (LocalColumn column : columns) {
             if (column.getField() == null && columns.size() == 1) {
                 sql.append(column.getColumnName()).append(" = '").append(element).append("', ");
@@ -153,6 +156,43 @@ public class DerbyOpt<T> implements IDatabaseOpt<T> {
             throw new RuntimeException("没有找到对应的数据");
         }
         return id;
+    }
+
+    @Override
+    public List<T> batchQuery(int fromIndex, int toIndex) {
+//        return DBUtil.batchQuery(fromIndex, toIndex, tableName, columns, pkColumnName, dataSource, clazz);
+        // 通过主键进行排序，然后使用 LIMIT 和 OFFSET 进行批量查询
+        StringBuilder sql = new StringBuilder("select * from ")
+                .append(tableName)
+                .append(" order by ")
+                .append(pkColumnName)
+                .append(" OFFSET ").append(fromIndex)
+                .append(" ROWS FETCH NEXT ").append(toIndex - fromIndex).append(" ROWS ONLY");
+
+        log.info("批量查询数据的sql: {}", sql);
+
+        List<T> result = new ArrayList<>();
+        try (Connection connection = dataSource.getConnection();
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(sql.toString())) {
+
+            while (resultSet.next()) {
+                T obj = clazz.getDeclaredConstructor().newInstance();
+                for (LocalColumn column : columns) {
+                    if (column.getField() != null) {
+                        column.getField().setAccessible(true);
+                        Object value = resultSet.getObject(column.getColumnName());
+                        if (value != null) {
+                            column.getField().set(obj, value);
+                        }
+                    }
+                }
+                result.add(obj);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("批量查询数据失败", e);
+        }
+        return result;
     }
 
 }
