@@ -5,6 +5,7 @@ import com.fxm.local.collection.db.config.H2Config;
 import com.fxm.local.collection.db.inter.IDatabaseOpt;
 import com.fxm.local.collection.db.util.ColumnNameUtil;
 import com.fxm.local.collection.db.util.DBUtil;
+import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
@@ -123,7 +124,10 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     @Override
     public int size() {
-        return 0;
+        // 查询表的数据量
+        StringBuilder sql = new StringBuilder("select count(*) AS count from ").append(tableName).append(";");
+        log.info("查询数据量的sql: {}", sql);
+        return DBUtil.querySingle(dataSource, sql.toString(), Lists.newArrayList(new LocalColumn("count", Integer.class, "INT", null)), Integer.class);
     }
 
     @Override

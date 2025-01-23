@@ -21,6 +21,7 @@ public class NormalTest {
             list.add("b");
             assertEquals("a", list.get(0));
             assertEquals("b", list.get(1));
+            assertEquals(2, list.size());
         }
         try (LocalList<TestBean1> list = new LocalList<>(TestBean1.class);) {
             list.add(new TestBean1("Jack", 26));
@@ -29,6 +30,7 @@ public class NormalTest {
             assertEquals(26, list.get(0).age);
             assertEquals("Rose", list.get(1).name);
             assertEquals(25, list.get(1).age);
+            assertEquals(2, list.size());
         }
         try (LocalList<TestBean1> list = new LocalList<>(TestBean1.class);) {
             for (int i = 0; i < 10000; i++) {
@@ -36,6 +38,7 @@ public class NormalTest {
             }
             assertEquals(0, list.get(0).age);
             assertEquals(9999, list.get(9999).age);
+            assertEquals(10000, list.size());
         }
     }
 
