@@ -1,5 +1,6 @@
 package com.fxm.local.collection.test;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -11,6 +12,12 @@ public class HSQLDBTest {
     @BeforeAll
     public static void before() {
         System.setProperty(CONST_DB_ENGINE, "hsqldb");
+        Thread.currentThread().setName("hsqldb");
+    }
+
+    @AfterAll
+    public static void after() {
+        Thread.currentThread().setName("main");
     }
 
     /**

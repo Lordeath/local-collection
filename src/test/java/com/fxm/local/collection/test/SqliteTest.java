@@ -5,6 +5,7 @@ import com.google.common.collect.Lists;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -18,6 +19,12 @@ public class SqliteTest {
     @BeforeAll
     public static void before() {
         System.setProperty(CONST_DB_ENGINE, "sqlite");
+        Thread.currentThread().setName("sqlite");
+    }
+
+    @AfterAll
+    public static void after() {
+        Thread.currentThread().setName("main");
     }
 
     /**
