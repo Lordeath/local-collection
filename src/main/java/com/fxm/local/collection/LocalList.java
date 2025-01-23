@@ -61,7 +61,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
 
     @Override
     public Iterator<T> iterator() {
-        throw new UnsupportedOperationException();
+        return new LocalListIterator();
     }
 
     @Override
@@ -146,12 +146,12 @@ public class LocalList<T> implements AutoCloseable, List<T> {
 
     @Override
     public ListIterator<T> listIterator() {
-        throw new UnsupportedOperationException();
+        return new LocalListIterator();
     }
 
     @Override
     public ListIterator<T> listIterator(int index) {
-        throw new UnsupportedOperationException();
+        return new LocalListIterator(index);
     }
 
     @Override
@@ -163,4 +163,91 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         return databaseOpt.pk(index);
     }
 
+    private class LocalListIterator implements ListIterator<T> {
+        private int cursor;
+        private int lastRet = -1;
+
+        LocalListIterator() {
+            this(0);
+        }
+
+        LocalListIterator(int index) {
+            if (index < 0 || index > size())
+                throw new IndexOutOfBoundsException("Index: " + index);
+            cursor = index;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return cursor < size();
+        }
+
+        @Override
+        public T next() {
+            if (!hasNext())
+                throw new java.util.NoSuchElementException();
+            lastRet = cursor;
+            return get(cursor++);
+        }
+
+        @Override
+        public boolean hasPrevious() {
+            return cursor > 0;
+        }
+
+        @Override
+        public T previous() {
+            if (!hasPrevious())
+                throw new java.util.NoSuchElementException();
+            lastRet = --cursor;
+            return get(cursor);
+        }
+
+        @Override
+        public int nextIndex() {
+            return cursor;
+        }
+
+        @Override
+        public int previousIndex() {
+            return cursor - 1;
+        }
+
+        @Override
+        public void remove() {
+            if (lastRet < 0)
+                throw new IllegalStateException();
+            
+            try {
+                LocalList.this.remove(lastRet);
+                if (lastRet < cursor)
+                    cursor--;
+                lastRet = -1;
+            } catch (IndexOutOfBoundsException e) {
+                throw new java.util.ConcurrentModificationException();
+            }
+        }
+
+        @Override
+        public void set(T t) {
+            if (lastRet < 0)
+                throw new IllegalStateException();
+            
+            try {
+                LocalList.this.set(lastRet, t);
+            } catch (IndexOutOfBoundsException e) {
+                throw new java.util.ConcurrentModificationException();
+            }
+        }
+
+        @Override
+        public void add(T t) {
+            try {
+                LocalList.this.add(cursor++, t);
+                lastRet = -1;
+            } catch (IndexOutOfBoundsException e) {
+                throw new java.util.ConcurrentModificationException();
+            }
+        }
+    }
 }

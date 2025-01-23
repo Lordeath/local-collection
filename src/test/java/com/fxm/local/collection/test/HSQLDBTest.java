@@ -5,7 +5,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import static com.fxm.local.collection.db.config.MainConfig.CONST_DB_ENGINE;
-import static com.fxm.local.collection.test.SqliteTest.testCases;
+import static com.fxm.local.collection.test.LocalListTest.testCases;
 
 public class HSQLDBTest {
 
