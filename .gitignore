@@ -8,4 +8,5 @@
 .factorypath
 .idea
 *.iml
+*.log
 /local_collection/
