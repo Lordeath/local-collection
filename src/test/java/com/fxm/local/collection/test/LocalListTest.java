@@ -17,11 +17,16 @@ public class LocalListTest {
             list.add("a");
             list.add("b");
             assertEquals(2, list.size());
-        }
+            assertEquals("a", list.get(0));
+            assertEquals("b", list.get(1));   }
         try (LocalList<TestBean1> list = new LocalList<>()) {
             list.add(new TestBean1("Jack", 26));
             list.add(new TestBean1("Rose", 25));
             assertEquals(2, list.size());
+            assertEquals("Jack", list.get(0).name);
+            assertEquals(26, list.get(0).age);
+            assertEquals("Rose", list.get(1).name);
+            assertEquals(25, list.get(1).age);
         }
 
         try (LocalList<String> list = new LocalList<>(String.class)) {
