@@ -5,7 +5,7 @@
 /logs/
 /.project
 /jxl.log
-/newsee-system.iml
 .factorypath
 .idea
 *.iml
+/local_collection/

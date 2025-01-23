@@ -29,27 +29,60 @@ public class ColumnNameUtil {
     }
 
     private static LocalColumn getLocalColumns(Class<?> clazz, String fieldName, Field field) {
-        if (clazz == String.class) {
-            return new LocalColumn(fieldName, String.class, "VARCHAR", field);
+        // 我担心不同的jdk的适配性，所以这里转换成String来做比较
+        String className = clazz.getName();
+        switch (className) {
+            case "java.lang.String":
+                return new LocalColumn(fieldName, String.class, "VARCHAR", field);
+            case "int":
+            case "java.lang.Integer":
+                return new LocalColumn(fieldName, Integer.class, "INT", field);
+            case "long":
+            case "java.lang.Long":
+                return new LocalColumn(fieldName, Long.class, "BIGINT", field);
+            case "double":
+            case "java.lang.Double":
+                return new LocalColumn(fieldName, Double.class, "DOUBLE", field);
+            case "float":
+            case "java.lang.Float":
+                return new LocalColumn(fieldName, Float.class, "FLOAT", field);
+            case "boolean":
+            case "java.lang.Boolean":
+                return new LocalColumn(fieldName, Boolean.class, "BOOLEAN", field);
+            case "char":
+            case "java.lang.Character":
+                return new LocalColumn(fieldName, Character.class, "CHAR", field);
+            default:
+                return null;
         }
-        if (clazz == Integer.class) {
-            return new LocalColumn(fieldName, Integer.class, "INT", field);
-        }
-        if (clazz == Long.class) {
-            return new LocalColumn(fieldName, Long.class, "BIGINT", field);
-        }
-        if (clazz == Double.class) {
-            return new LocalColumn(fieldName, Double.class, "DOUBLE", field);
-        }
-        if (clazz == Float.class) {
-            return new LocalColumn(fieldName, Float.class, "FLOAT", field);
-        }
-        if (clazz == Boolean.class) {
-            return new LocalColumn(fieldName, Boolean.class, "BOOLEAN", field);
-        }
-        if (clazz == Character.class) {
-            return new LocalColumn(fieldName, Character.class, "CHAR", field);
-        }
-        return null;
+//
+//        if (clazz.isPrimitive()) {
+//            if (clazz == int.class) {
+//                return new LocalColumn(fieldName, Integer.class, "INT", field);
+//            }
+//        }
+//
+//        if (clazz == String.class) {
+//            return new LocalColumn(fieldName, String.class, "VARCHAR", field);
+//        }
+//        if (clazz == Integer.class) {
+//            return new LocalColumn(fieldName, Integer.class, "INT", field);
+//        }
+//        if (clazz == Long.class) {
+//            return new LocalColumn(fieldName, Long.class, "BIGINT", field);
+//        }
+//        if (clazz == Double.class) {
+//            return new LocalColumn(fieldName, Double.class, "DOUBLE", field);
+//        }
+//        if (clazz == Float.class) {
+//            return new LocalColumn(fieldName, Float.class, "FLOAT", field);
+//        }
+//        if (clazz == Boolean.class) {
+//            return new LocalColumn(fieldName, Boolean.class, "BOOLEAN", field);
+//        }
+//        if (clazz == Character.class) {
+//            return new LocalColumn(fieldName, Character.class, "CHAR", field);
+//        }
+//        return null;
     }
 }
