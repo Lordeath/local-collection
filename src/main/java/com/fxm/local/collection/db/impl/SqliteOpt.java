@@ -1,10 +1,11 @@
 package com.fxm.local.collection.db.impl;
 
 import com.fxm.local.collection.db.bean.LocalColumn;
-import com.fxm.local.collection.db.config.H2Config;
+import com.fxm.local.collection.db.config.SqliteConfig;
 import com.fxm.local.collection.db.inter.IDatabaseOpt;
 import com.fxm.local.collection.db.util.ColumnNameUtil;
 import com.fxm.local.collection.db.util.DBUtil;
+import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
@@ -13,13 +14,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * 通过操作H2来实现对数据的操作，注意，这个类是线程不安全的
- *
- * @param <T>
- */
 @Slf4j
-public class H2Opt<T> implements IDatabaseOpt<T> {
+public class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     private final DataSource dataSource;
     // 操作的表名
@@ -28,9 +24,9 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
     private final List<LocalColumn> columns;
     private final Class<T> clazz;
 
-    public H2Opt(Class<T> clazz) {
+    public SqliteOpt(Class<T> clazz) {
         this.clazz = clazz;
-        dataSource = H2Config.getDataSource();
+        dataSource = SqliteConfig.getDataSource();
         tableName = "tmp_" + UUID.randomUUID().toString().replace("-", "");
         pkColumnName = "id" + UUID.randomUUID().toString().replace("-", "");
         log.info("开始初始化数据源: {} {}", dataSource, tableName);
@@ -40,7 +36,7 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
         // 2. 获取到列名和类型
         // 3. 创建表
         StringBuilder sql = new StringBuilder("create table ").append(tableName)
-                .append(" (").append(pkColumnName).append(" BIGINT AUTO_INCREMENT PRIMARY KEY");
+                .append(" (").append(pkColumnName).append(" INTEGER PRIMARY KEY AUTOINCREMENT");
         for (LocalColumn column : columns) {
             sql.append(", ").append(column.getColumnName()).append(" ").append(column.getDbType());
         }
@@ -70,7 +66,10 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     @Override
     public void clear() {
-        DBUtil.clear(tableName, dataSource);
+        // 删除表的数据
+        StringBuilder sql = new StringBuilder("delete from ").append(tableName).append(";");
+        log.info("清空表的sql: {}", sql);
+        DBUtil.executeSql(dataSource, sql.toString());
     }
 
 
@@ -98,6 +97,15 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     @Override
     public long pk(int index) {
+//        // 查出原有的数据的id，然后进行更新
+//        StringBuilder sql = new StringBuilder("select ").append(pkColumnName).append(" from ")
+//                .append(tableName).append(" order by ").append(pkColumnName).append(" limit ").append(index).append(",1;");
+//        log.info("查询数据的id的sql: {}", sql);
+//        Long id = DBUtil.querySingle(dataSource, sql.toString(), Lists.newArrayList(new LocalColumn(pkColumnName, Long.class, "BIGINT", null)), Long.class);
+//        if (id == null) {
+//            throw new RuntimeException("没有找到对应的数据");
+//        }
+//        return id;
         return DBUtil.pk(index, tableName, pkColumnName, dataSource);
     }
 

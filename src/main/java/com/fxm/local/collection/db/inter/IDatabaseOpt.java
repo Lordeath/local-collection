@@ -18,4 +18,5 @@ public interface IDatabaseOpt<T> {
 
     T set(int index, T element);
 
+    long pk(int index);
 }

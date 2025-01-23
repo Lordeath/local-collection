@@ -1,7 +1,9 @@
 package com.fxm.local.collection;
 
 import com.fxm.local.collection.db.impl.H2Opt;
+import com.fxm.local.collection.db.impl.SqliteOpt;
 import com.fxm.local.collection.db.inter.IDatabaseOpt;
+import com.fxm.local.collection.db.util.DBUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collection;
@@ -22,8 +24,10 @@ public class LocalList<T> implements AutoCloseable, List<T> {
 
     public LocalList(Class<T> clazz) {
         String dbEngine = System.getProperty(CONST_DB_ENGINE);
-        if (dbEngine == null || "h2".equals(dbEngine)) {
+        if (dbEngine == null || "h2".equalsIgnoreCase(dbEngine)) {
             databaseOpt = new H2Opt<>(clazz);
+        } else if ("sqlite".equalsIgnoreCase(dbEngine)) {
+            databaseOpt = new SqliteOpt<>(clazz);
         } else {
             throw new IllegalArgumentException("其他的数据库暂时不支持: " + dbEngine);
         }
@@ -148,4 +152,9 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     public List<T> subList(int fromIndex, int toIndex) {
         throw new UnsupportedOperationException();
     }
+
+    public long pk(int index) {
+        return databaseOpt.pk(index);
+    }
+
 }

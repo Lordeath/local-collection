@@ -5,20 +5,31 @@ import com.google.common.collect.Lists;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import static com.fxm.local.collection.db.config.MainConfig.CONST_DB_ENGINE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class NormalTest {
+public class SqliteTest {
+
+
+    @BeforeAll
+    public static void before() {
+        System.setProperty(CONST_DB_ENGINE, "sqlite");
+    }
 
     /**
      * 测试新增和获取
-     * @throws Exception
      */
-    @SuppressWarnings("ConstantValue")
     @Test
     public void testInsertAndGet() throws Exception {
-        try (LocalList<String> list = new LocalList<>(String.class);) {
+        testCases();
+    }
+
+    public static void testCases() throws Exception {
+        try (LocalList<String> list = new LocalList<>(String.class)) {
             list.add("a");
             list.add("b");
             assertEquals(2, list.size());
@@ -36,6 +47,7 @@ public class NormalTest {
 
             list.clear();
             assertEquals(0, list.size());
+            assertTrue(list.isEmpty());
 
             list.add("a");
             list.add("b");
@@ -53,7 +65,7 @@ public class NormalTest {
             assertEquals(1, list.size());
             assertEquals("a", list.get(0));
         }
-        try (LocalList<TestBean1> list = new LocalList<>(TestBean1.class);) {
+        try (LocalList<TestBean1> list = new LocalList<>(TestBean1.class)) {
             list.add(new TestBean1("Jack", 26));
             list.add(new TestBean1("Rose", 25));
             assertEquals(2, list.size());
@@ -78,7 +90,7 @@ public class NormalTest {
             list.add(new TestBean1("Rose", 25));
             assertEquals(2, list.size());
         }
-        try (LocalList<TestBean1> list = new LocalList<>(TestBean1.class);) {
+        try (LocalList<TestBean1> list = new LocalList<>(TestBean1.class)) {
             for (int i = 0; i < 10000; i++) {
                 list.add(new TestBean1("Jack", i));
             }
