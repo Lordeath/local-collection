@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="true">
+    <!--定义日志文件的存储地址 勿在 LogBack 的配置中使用相对路径-->
+    <springProperty scope="context" name="LOG_HOME" source="logback.log.home" defaultValue="../logs"/>
+    <property name="PROJECT_NAME" value="local-cache"/>
+
+    <!-- 控制台输出 -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <!--格式化输出：%d表示日期，%thread表示线程名，%-5level：级别从左显示5个字符宽度%msg：日志消息，%n是换行符-->
+            <pattern>【${PROJECT_NAME}】%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50}.%M\(%line\) - %msg%n
+            </pattern>
+        </encoder>
+    </appender>
+
+    <!--myibatis log configure-->
+    <logger name="org.apache.ibatis" level="DEBUG"/>
+    <logger name="com.alibaba.druid" level="DEBUG"/>
+    <logger name="com.rabbitmq.client.impl.ForgivingExceptionHandler" level="ERROR"/>
+    <logger name="org.springframework.amqp" level="ERROR"/>
+    <logger name="org.springframework.amqp.rabbit.listener" level="OFF"/>
+    <logger name="org.apache.activemq.broker" level="ERROR"/>
+    <logger name="feign" level="DEBUG"/>
+    <!-- 先不测mongodb相关功能，所以关掉mongodb相关日志 -->
+    <logger name="org.mongodb.driver.cluster" level="OFF"/>
+
+    <!-- 日志输出级别 -->
+    <root level="DEBUG">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>
