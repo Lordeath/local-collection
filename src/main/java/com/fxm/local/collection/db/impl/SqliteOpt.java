@@ -5,7 +5,6 @@ import com.fxm.local.collection.db.config.SqliteConfig;
 import com.fxm.local.collection.db.inter.IDatabaseOpt;
 import com.fxm.local.collection.db.util.ColumnNameUtil;
 import com.fxm.local.collection.db.util.DBUtil;
-import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
@@ -97,15 +96,6 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     @Override
     public long pk(int index) {
-//        // 查出原有的数据的id，然后进行更新
-//        StringBuilder sql = new StringBuilder("select ").append(pkColumnName).append(" from ")
-//                .append(tableName).append(" order by ").append(pkColumnName).append(" limit ").append(index).append(",1;");
-//        log.info("查询数据的id的sql: {}", sql);
-//        Long id = DBUtil.querySingle(dataSource, sql.toString(), Lists.newArrayList(new LocalColumn(pkColumnName, Long.class, "BIGINT", null)), Long.class);
-//        if (id == null) {
-//            throw new RuntimeException("没有找到对应的数据");
-//        }
-//        return id;
         return DBUtil.pk(index, tableName, pkColumnName, dataSource);
     }
 

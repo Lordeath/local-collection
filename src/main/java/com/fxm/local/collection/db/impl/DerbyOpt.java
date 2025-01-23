@@ -2,7 +2,6 @@ package com.fxm.local.collection.db.impl;
 
 import com.fxm.local.collection.db.bean.LocalColumn;
 import com.fxm.local.collection.db.config.DerbyConfig;
-import com.fxm.local.collection.db.config.HSQLDBConfig;
 import com.fxm.local.collection.db.inter.IDatabaseOpt;
 import com.fxm.local.collection.db.util.ColumnNameUtil;
 import com.fxm.local.collection.db.util.DBUtil;
@@ -101,7 +100,6 @@ public class DerbyOpt<T> implements IDatabaseOpt<T> {
 
     @Override
     public T get(int index) {
-//        return DBUtil.get(index, tableName, columns, pkColumnName, dataSource, clazz);
         // 通过主键进行排序，然后查询，limit offset 1
         // 拼接sql
         StringBuilder sql = new StringBuilder("select * from ")
@@ -113,9 +111,7 @@ public class DerbyOpt<T> implements IDatabaseOpt<T> {
 
     @Override
     public T set(int index, T element) {
-//        return DBUtil.set(index, element, tableName, columns, pkColumnName, dataSource);
         // 查出原有的数据的id，然后进行更新
-//        Long id = pk(index, tableName, pkColumnName, dataSource);
         Long id = pk(index);
         // 拼接sql
         StringBuilder sql = new StringBuilder("update ").append(tableName).append(" set ");
@@ -147,7 +143,6 @@ public class DerbyOpt<T> implements IDatabaseOpt<T> {
 
     @Override
     public long pk(int index) {
-//        return DBUtil.pk(index, tableName, pkColumnName, dataSource);
         StringBuilder sql = new StringBuilder("select ").append(pkColumnName).append(" from ")
                 .append(tableName).append(" order by ").append(pkColumnName).append(" OFFSET ").append(index).append(" ROWS FETCH NEXT 1 ROWS ONLY");
         log.info("查询数据的id的sql: {}", sql);
@@ -160,7 +155,6 @@ public class DerbyOpt<T> implements IDatabaseOpt<T> {
 
     @Override
     public List<T> batchQuery(int fromIndex, int toIndex) {
-//        return DBUtil.batchQuery(fromIndex, toIndex, tableName, columns, pkColumnName, dataSource, clazz);
         // 通过主键进行排序，然后使用 LIMIT 和 OFFSET 进行批量查询
         StringBuilder sql = new StringBuilder("select * from ")
                 .append(tableName)

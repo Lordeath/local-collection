@@ -1,7 +1,6 @@
 package com.fxm.local.collection.db.impl;
 
 import com.fxm.local.collection.db.bean.LocalColumn;
-import com.fxm.local.collection.db.config.H2Config;
 import com.fxm.local.collection.db.config.HSQLDBConfig;
 import com.fxm.local.collection.db.inter.IDatabaseOpt;
 import com.fxm.local.collection.db.util.ColumnNameUtil;
