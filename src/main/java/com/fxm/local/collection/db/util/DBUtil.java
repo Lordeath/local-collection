@@ -12,6 +12,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 public class DBUtil {
@@ -27,18 +28,22 @@ public class DBUtil {
             if (column.getField() == null && columns.size() == 1) {
                 sql.append("'").append(obj).append("'").append(", ");
             } else {
-                Object value = null;
+                Object value;
                 column.getField().setAccessible(true);
                 try {
                     value = column.getField().get(obj);
                 } catch (IllegalAccessException e) {
                     throw new RuntimeException(e);
                 }
-                sql.append("'").append(value).append("'").append(", ");
+                if (Objects.isNull(value) || value instanceof Number) {
+                    sql.append(value).append(", ");
+                } else {
+                    sql.append("'").append(value).append("'").append(", ");
+                }
             }
         }
         sql.setLength(sql.length() - 2);
-        sql.append(");");
+        sql.append(")");
         log.info("添加数据的sql: {}", sql);
         // 执行sql
         return DBUtil.executeSql(dataSource, sql.toString());
@@ -72,7 +77,6 @@ public class DBUtil {
             sql.append("), ");
         }
         sql.setLength(sql.length() - 2);
-        sql.append(";");
         log.info("批量添加数据的sql: {}", sql);
         // 执行sql
         return DBUtil.executeSql(dataSource, sql.toString());
@@ -80,16 +84,9 @@ public class DBUtil {
 
     public static <T> T remove(int index, String tableName, String pkColumnName, List<LocalColumn> columns, DataSource dataSource, Class<T> clazz) {
         // 通过index找到id，然后通过id进行删除
-        Long id;
-        StringBuilder sql = new StringBuilder("select ").append(pkColumnName).append(" from ")
-                .append(tableName).append(" order by ").append(pkColumnName).append(" limit 1 offset ").append(index).append(";");
-        log.info("查询数据的id的sql: {}", sql);
-        id = DBUtil.querySingle(dataSource, sql.toString(), Lists.newArrayList(new LocalColumn(pkColumnName, Long.class, "BIGINT", null)), Long.class);
-        if (id == null) {
-            throw new RuntimeException("没有找到对应的数据");
-        }
+        Long id = pk(index, tableName, pkColumnName, dataSource);
         // 拼接sql
-        sql = new StringBuilder("delete from ").append(tableName).append(" where ").append(pkColumnName).append(" = ").append(id).append(";");
+        StringBuilder sql = new StringBuilder("delete from ").append(tableName).append(" where ").append(pkColumnName).append(" = ").append(id);
         log.info("删除数据的sql: {}", sql);
         T t = get(index, tableName, columns, pkColumnName, dataSource, clazz);
         // 执行sql
@@ -101,7 +98,7 @@ public class DBUtil {
         // 通过主键进行排序，然后查询，limit offset 1
         // 拼接sql
         StringBuilder sql = new StringBuilder("select * from ")
-                .append(tableName).append(" order by ").append(pkColumnName).append(" limit 1 offset ").append(index).append(";");
+                .append(tableName).append(" order by ").append(pkColumnName).append(" limit 1 offset ").append(index);
         log.info("查询数据的sql: {}", sql);
         return DBUtil.querySingle(dataSource, sql.toString(), columns, clazz);
     }
@@ -181,36 +178,31 @@ public class DBUtil {
 
     public static Integer size(String tableName, DataSource dataSource) {
         // 查询表的数据量
-        StringBuilder sql = new StringBuilder("select count(*) AS count from ").append(tableName).append(";");
+        StringBuilder sql = new StringBuilder("select count(*) AS count from ").append(tableName);
         log.info("查询数据量的sql: {}", sql);
         return DBUtil.querySingle(dataSource, sql.toString(), Lists.newArrayList(new LocalColumn("count", Integer.class, "INT", null)), Integer.class);
     }
 
     public static void extracted(String tableName, DataSource dataSource) {
         // 删除表的数据
-        StringBuilder sql = new StringBuilder("drop table ").append(tableName).append(";");
+        StringBuilder sql = new StringBuilder("drop table ").append(tableName);
         log.info("删除表的sql: {}", sql);
         DBUtil.executeSql(dataSource, sql.toString());
     }
 
     public static void clear(String tableName, DataSource dataSource) {
         // 删除表的数据
-        StringBuilder sql = new StringBuilder("truncate table ").append(tableName).append(";");
+        StringBuilder sql = new StringBuilder("truncate table ").append(tableName);
         log.info("清空表的sql: {}", sql);
         DBUtil.executeSql(dataSource, sql.toString());
     }
 
     public static <T> T set(int index, T element, String tableName, List<LocalColumn> columns, String pkColumnName, DataSource dataSource) {
         // 查出原有的数据的id，然后进行更新
-        StringBuilder sql = new StringBuilder("select ").append(pkColumnName).append(" from ")
-                .append(tableName).append(" order by ").append(pkColumnName).append(" limit 1 offset ").append(index).append(";");
-        log.info("查询数据的id的sql: {}", sql);
-        Long id = DBUtil.querySingle(dataSource, sql.toString(), Lists.newArrayList(new LocalColumn(pkColumnName, Long.class, "BIGINT", null)), Long.class);
-        if (id == null) {
-            throw new RuntimeException("没有找到对应的数据");
-        }
+        Long id = pk(index, tableName, pkColumnName, dataSource);
+
         // 拼接sql
-        sql = new StringBuilder("update ").append(tableName).append(" set ");
+        StringBuilder sql = new StringBuilder("update ").append(tableName).append(" set ");
         for (LocalColumn column : columns) {
             if (column.getField() == null && columns.size() == 1) {
                 sql.append(column.getColumnName()).append(" = '").append(element).append("', ");
@@ -222,11 +214,15 @@ public class DBUtil {
                 } catch (IllegalAccessException e) {
                     throw new RuntimeException(e);
                 }
-                sql.append(column.getColumnName()).append(" = '").append(value).append("', ");
+                if (Objects.isNull(value) || value instanceof Number) {
+                    sql.append(column.getColumnName()).append(" = ").append(value).append(", ");
+                } else {
+                    sql.append(column.getColumnName()).append(" = '").append(value).append("', ");
+                }
             }
         }
         sql.setLength(sql.length() - 2);
-        sql.append(" where ").append(pkColumnName).append(" = ").append(id).append(";");
+        sql.append(" where ").append(pkColumnName).append(" = ").append(id);
         log.info("更新数据的sql: {}", sql);
         // 执行sql
         DBUtil.executeSql(dataSource, sql.toString());
@@ -236,7 +232,7 @@ public class DBUtil {
     public static long pk(int index, String tableName, String pkColumnName, DataSource dataSource) {
         // 查出原有的数据的id，然后进行更新
         StringBuilder sql = new StringBuilder("select ").append(pkColumnName).append(" from ")
-                .append(tableName).append(" order by ").append(pkColumnName).append(" limit 1 offset ").append(index).append(";");
+                .append(tableName).append(" order by ").append(pkColumnName).append(" limit 1 offset ").append(index);
         log.info("查询数据的id的sql: {}", sql);
         Long id = DBUtil.querySingle(dataSource, sql.toString(), Lists.newArrayList(new LocalColumn(pkColumnName, Long.class, "BIGINT", null)), Long.class);
         if (id == null) {
