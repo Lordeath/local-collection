@@ -1,6 +1,7 @@
 package com.fxm.local.collection;
 
 import com.fxm.local.collection.db.impl.H2Opt;
+import com.fxm.local.collection.db.impl.HSQLDBOpt;
 import com.fxm.local.collection.db.impl.SqliteOpt;
 import com.fxm.local.collection.db.inter.IDatabaseOpt;
 import com.fxm.local.collection.db.util.DBUtil;
@@ -28,6 +29,8 @@ public class LocalList<T> implements AutoCloseable, List<T> {
             databaseOpt = new H2Opt<>(clazz);
         } else if ("sqlite".equalsIgnoreCase(dbEngine)) {
             databaseOpt = new SqliteOpt<>(clazz);
+        } else if ("hsqldb".equalsIgnoreCase(dbEngine)) {
+            databaseOpt = new HSQLDBOpt<>(clazz);
         } else {
             throw new IllegalArgumentException("其他的数据库暂时不支持: " + dbEngine);
         }

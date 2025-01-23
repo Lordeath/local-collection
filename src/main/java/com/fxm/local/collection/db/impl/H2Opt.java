@@ -35,7 +35,7 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
         pkColumnName = "id" + UUID.randomUUID().toString().replace("-", "");
         log.info("开始初始化数据源: {} {}", dataSource, tableName);
         columns = Collections.unmodifiableList(ColumnNameUtil.getFields(clazz));
-        // TODO 创建表
+        // 创建表
         // 1. 获取到表名
         // 2. 获取到列名和类型
         // 3. 创建表
