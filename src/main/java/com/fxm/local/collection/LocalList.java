@@ -24,9 +24,13 @@ import static com.fxm.local.collection.db.config.MainConfig.CONST_DB_ENGINE;
 @Slf4j
 public class LocalList<T> implements AutoCloseable, List<T> {
 
-    private final IDatabaseOpt<T> databaseOpt;
+    private IDatabaseOpt<T> databaseOpt;
 
     public LocalList(Class<T> clazz) {
+        init(clazz);
+    }
+
+    private void init(Class<T> clazz) {
         String dbEngine = System.getProperty(CONST_DB_ENGINE);
         if (dbEngine == null || "h2".equalsIgnoreCase(dbEngine)) {
             databaseOpt = new H2Opt<>(clazz);
@@ -34,11 +38,15 @@ public class LocalList<T> implements AutoCloseable, List<T> {
             databaseOpt = new SqliteOpt<>(clazz);
         } else if ("hsqldb".equalsIgnoreCase(dbEngine)) {
             databaseOpt = new HSQLDBOpt<>(clazz);
-        }  else if ("derby".equalsIgnoreCase(dbEngine)) {
+        } else if ("derby".equalsIgnoreCase(dbEngine)) {
             databaseOpt = new DerbyOpt<>(clazz);
         } else {
             throw new IllegalArgumentException("其他的数据库暂时不支持: " + dbEngine);
         }
+    }
+
+    public LocalList() {
+        databaseOpt = null;
     }
 
     @Override
@@ -78,6 +86,9 @@ public class LocalList<T> implements AutoCloseable, List<T> {
 
     @Override
     public boolean add(T t) {
+        if (databaseOpt == null) {
+            init((Class<T>) t.getClass());
+        }
         return databaseOpt.add(t);
     }
 
@@ -164,10 +175,10 @@ public class LocalList<T> implements AutoCloseable, List<T> {
             throw new IndexOutOfBoundsException("toIndex = " + toIndex);
         if (fromIndex > toIndex)
             throw new IllegalArgumentException("fromIndex(" + fromIndex + ") > toIndex(" + toIndex + ")");
-        
+
         // 使用批量查询获取数据
         List<T> batchResult = databaseOpt.batchQuery(fromIndex, toIndex);
-        
+
         // 返回一个不可修改的List视图
         return Collections.unmodifiableList(batchResult);
     }
@@ -177,7 +188,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * 注意：对返回的列表的修改不会影响原始列表。
      *
      * @param fromIndex 起始索引（包含）
-     * @param toIndex 结束索引（不包含）
+     * @param toIndex   结束索引（不包含）
      * @return 包含指定范围元素的新ArrayList
      */
     public List<T> subListInMemory(int fromIndex, int toIndex) {
@@ -187,7 +198,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
             throw new IndexOutOfBoundsException("toIndex = " + toIndex);
         if (fromIndex > toIndex)
             throw new IllegalArgumentException("fromIndex(" + fromIndex + ") > toIndex(" + toIndex + ")");
-        
+
         // 使用批量查询获取数据并返回一个新的ArrayList
         return Collections.unmodifiableList(databaseOpt.batchQuery(fromIndex, toIndex));
     }
@@ -250,7 +261,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         public void remove() {
             if (lastRet < 0)
                 throw new IllegalStateException();
-            
+
             try {
                 LocalList.this.remove(lastRet);
                 if (lastRet < cursor)
@@ -265,7 +276,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         public void set(T t) {
             if (lastRet < 0)
                 throw new IllegalStateException();
-            
+
             try {
                 LocalList.this.set(lastRet, t);
             } catch (IndexOutOfBoundsException e) {

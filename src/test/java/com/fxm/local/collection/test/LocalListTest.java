@@ -13,6 +13,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Slf4j
 public class LocalListTest {
     public static void testCases() throws Exception {
+        try (LocalList<String> list = new LocalList<>()) {
+            list.add("a");
+            list.add("b");
+            assertEquals(2, list.size());
+        }
+        try (LocalList<TestBean1> list = new LocalList<>()) {
+            list.add(new TestBean1("Jack", 26));
+            list.add(new TestBean1("Rose", 25));
+            assertEquals(2, list.size());
+        }
+
         try (LocalList<String> list = new LocalList<>(String.class)) {
             list.add("a");
             list.add("b");
