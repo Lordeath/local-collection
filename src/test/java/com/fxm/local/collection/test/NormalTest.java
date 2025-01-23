@@ -1,6 +1,7 @@
 package com.fxm.local.collection.test;
 
 import com.fxm.local.collection.LocalList;
+import com.google.common.collect.Lists;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -19,9 +20,14 @@ public class NormalTest {
         try (LocalList<String> list = new LocalList<>(String.class);) {
             list.add("a");
             list.add("b");
+            assertEquals(2, list.size());
             assertEquals("a", list.get(0));
             assertEquals("b", list.get(1));
-            assertEquals(2, list.size());
+
+            list.addAll(Lists.newArrayList("c", "d"));
+            assertEquals(4, list.size());
+            assertEquals("c", list.get(2));
+            assertEquals("d", list.get(3));
         }
         try (LocalList<TestBean1> list = new LocalList<>(TestBean1.class);) {
             list.add(new TestBean1("Jack", 26));

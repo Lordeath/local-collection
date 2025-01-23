@@ -81,7 +81,40 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     @Override
     public boolean addAll(Collection<? extends T> c) {
-        return false;
+//        for (T t : c) {
+//            add(t);
+//        }
+        // 使用批量插入
+        StringBuilder sql = new StringBuilder("insert into ").append(tableName).append(" (");
+        for (LocalColumn column : columns) {
+            sql.append(column.getColumnName()).append(", ");
+        }
+        sql.setLength(sql.length() - 2);
+        sql.append(") values ");
+        for (T t : c) {
+            sql.append("(");
+            for (LocalColumn column : columns) {
+                if (column.getField() == null && columns.size() == 1) {
+                    sql.append("'").append(t).append("'").append(", ");
+                } else {
+                    Object value = null;
+                    column.getField().setAccessible(true);
+                    try {
+                        value = column.getField().get(t);
+                    } catch (IllegalAccessException e) {
+                        throw new RuntimeException(e);
+                    }
+                    sql.append("'").append(value).append("'").append(", ");
+                }
+            }
+            sql.setLength(sql.length() - 2);
+            sql.append("), ");
+        }
+        sql.setLength(sql.length() - 2);
+        sql.append(";");
+        log.info("批量添加数据的sql: {}", sql);
+        // 执行sql
+        return DBUtil.executeSql(dataSource, sql.toString());
     }
 
     @Override
