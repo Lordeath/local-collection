@@ -1,18 +1,21 @@
 package com.fxm.local.collection.db.impl;
 
 import com.fxm.local.collection.db.bean.LocalColumn;
+import com.fxm.local.collection.db.bean.LocalColumnForMap;
 import com.fxm.local.collection.db.config.HSQLDBConfig;
 import com.fxm.local.collection.db.inter.IDatabaseOpt;
 import com.fxm.local.collection.db.util.ColumnNameUtil;
 import com.fxm.local.collection.db.util.DBUtil;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.sql.DataSource;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * 通过操作H2来实现对数据的操作，注意，这个类是线程不安全的
@@ -53,10 +56,10 @@ public class HSQLDBOpt<T> implements IDatabaseOpt<T> {
         log.info("数据源初始化完毕: {} {}", dataSource, tableName);
     }
 
-    public HSQLDBOpt(Class<T> clazz, String tableName, List<LocalColumn> columns) {
+    public HSQLDBOpt(Class<T> clazz, String tableName, List<LocalColumnForMap> columnsForMap) {
         this.clazz = clazz;
         this.tableName = tableName;
-        this.columns = columns;
+        this.columns = columnsForMap.stream().map(LocalColumnForMap::getSinkColumn).collect(Collectors.toList());
         dataSource = HSQLDBConfig.getDataSource();
         log.info("开始初始化数据源: {} {}", dataSource, tableName);
         // 创建表
@@ -69,6 +72,13 @@ public class HSQLDBOpt<T> implements IDatabaseOpt<T> {
         sql.append(");");
         log.info("创建表的sql: {}", sql);
         // 执行sql
+        DBUtil.executeSql(dataSource, sql.toString());
+
+        // 使用 columnsForMap的isKey判断是否是
+        String pks = columnsForMap.stream().filter(LocalColumnForMap::isKey).map(m -> m.getSinkColumn().getColumnName()).collect(Collectors.joining(","));
+        sql = new StringBuilder("create index idx_").append(StringUtils.replace(pks, ",", "_"))
+                .append(" ON ").append(tableName).append("(").append(pks).append(")");
+        log.info("表创建完毕，接下来设置map的key索引: {}", sql);
         DBUtil.executeSql(dataSource, sql.toString());
         pkColumnName = null;
         log.info("数据源初始化完毕: {} {}", dataSource, tableName);
@@ -130,13 +140,18 @@ public class HSQLDBOpt<T> implements IDatabaseOpt<T> {
     }
 
     @Override
-    public boolean insertGroupedData(String sourceTableName, String targetTableName, List<String> groupByColumns, String whereClause, String keyColumn, List<LocalColumn> resultColumns) {
-        return DBUtil.insertGroupedData(dataSource, sourceTableName, targetTableName, groupByColumns, whereClause, keyColumn, resultColumns);
+    public boolean insertGroupedData(String sourceTableName, String targetTableName, List<String> groupByColumns, String whereClause, List<LocalColumnForMap> columnForMapList) {
+        return DBUtil.insertGroupedData(dataSource, sourceTableName, targetTableName, groupByColumns, whereClause, columnForMapList);
     }
 
     @Override
     public T getByKey(String keyColumn, Object keyValue) {
         return DBUtil.getByKey(dataSource, tableName, keyColumn, keyValue, columns, clazz);
+    }
+
+    @Override
+    public T putByKey(String keyColumn, String key, T value) {
+        return DBUtil.putByKey(dataSource, tableName, keyColumn, key, value, columns, clazz);
     }
 
     @Override
@@ -149,18 +164,4 @@ public class HSQLDBOpt<T> implements IDatabaseOpt<T> {
         return DBUtil.getAllKeys(dataSource, tableName, keyColumn);
     }
 
-    @Override
-    public boolean createIndex(String indexName, String columnName) {
-        return DBUtil.createIndex(dataSource, tableName, indexName, columnName);
-    }
-
-    @Override
-    public boolean createTable(String tableName, List<LocalColumn> columns) {
-        return DBUtil.createTable(dataSource, tableName, columns);
-    }
-
-    @Override
-    public boolean insert(String tableName, Object value, List<LocalColumn> columns) {
-        return DBUtil.insert(dataSource, tableName, value, columns);
-    }
 }

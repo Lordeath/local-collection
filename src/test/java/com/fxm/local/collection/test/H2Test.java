@@ -24,8 +24,13 @@ public class H2Test {
      * 测试新增和获取
      */
     @Test
-    public void testInsertAndGet() throws Exception {
+    public void testInsertAndGet() {
         testCases();
+    }
+
+    @Test
+    public void testMap() {
+        LocalListTest.testMap();
     }
 
 }

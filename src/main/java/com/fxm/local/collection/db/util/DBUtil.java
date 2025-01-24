@@ -1,6 +1,7 @@
 package com.fxm.local.collection.db.util;
 
 import com.fxm.local.collection.db.bean.LocalColumn;
+import com.fxm.local.collection.db.bean.LocalColumnForMap;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 
@@ -363,31 +364,26 @@ public class DBUtil {
 
     public static boolean insertGroupedData(DataSource dataSource, String sourceTableName,
                                             String targetTableName, List<String> groupByColumns,
-                                            String whereClause, String keyColumn,
-                                            List<LocalColumn> resultColumns) {
+                                            String whereClause,
+                                            List<LocalColumnForMap> columnForMapList) {
         // 构建INSERT语句
         StringBuilder insertSql = new StringBuilder();
         insertSql.append("INSERT INTO ").append(targetTableName).append(" (")
-                .append(keyColumn);
+        ;
 
-        resultColumns = resultColumns.stream().filter(f -> !f.getColumnName().equals(keyColumn)).collect(Collectors.toList());
-
-        for (LocalColumn column : resultColumns) {
-            insertSql.append(", ").append(column.getColumnName());
+        for (LocalColumnForMap localColumnForMap : columnForMapList) {
+            insertSql.append(localColumnForMap.getSinkColumn().getColumnName()).append(", ");
         }
+        insertSql.setLength(insertSql.length() - 2);
 
         insertSql.append(") SELECT ");
 
         // 构建SELECT子句
-        insertSql.append(String.join(" || '.' || ", groupByColumns))
-                .append(" AS ").append(keyColumn);
-
-        for (LocalColumn column : resultColumns) {
-            insertSql.append(", ").append(column.getColumnName());
+        for (LocalColumnForMap localColumnForMap : columnForMapList) {
+            insertSql.append(localColumnForMap.getExpression()).append(", ");
         }
-
+        insertSql.setLength(insertSql.length() - 2);
         insertSql.append(" FROM ").append(sourceTableName);
-
         if (whereClause != null && !whereClause.isEmpty()) {
             insertSql.append(" WHERE ").append(whereClause);
         }
@@ -426,6 +422,17 @@ public class DBUtil {
             throw new RuntimeException("Failed to get object by key", e);
         }
         return null;
+    }
+
+
+    public static <K, V> V putByKey(DataSource dataSource, String tableName, String keyColumn, K key, V value, List<LocalColumn> columns, Class<V> clazz) {
+        V v = getByKey(dataSource, tableName, keyColumn, key, columns, clazz);
+        if (v != null) {
+            // update
+            removeByKey(dataSource, tableName, keyColumn, key);
+        }
+        add(value, tableName, columns, dataSource);
+        return value;
     }
 
     public static boolean removeByKey(DataSource dataSource, String tableName, String keyColumn, Object keyValue) {
@@ -550,4 +557,5 @@ public class DBUtil {
             throw new RuntimeException("Failed to insert data", e);
         }
     }
+
 }

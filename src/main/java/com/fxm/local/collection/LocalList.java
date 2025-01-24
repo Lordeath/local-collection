@@ -1,6 +1,7 @@
 package com.fxm.local.collection;
 
 import com.fxm.local.collection.db.bean.LocalColumn;
+import com.fxm.local.collection.db.bean.LocalColumnForMap;
 import com.fxm.local.collection.db.factory.DatabaseFactory;
 import com.fxm.local.collection.db.impl.DerbyOpt;
 import com.fxm.local.collection.db.impl.H2Opt;
@@ -17,6 +18,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.stream.Collectors;
 
 import static com.fxm.local.collection.db.config.MainConfig.CONST_DB_ENGINE;
 
@@ -30,6 +32,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     @Getter
     private IDatabaseOpt<T> databaseOpt;
     private Class<T> clazz;
+    @Getter
     private List<LocalColumn> columns;
 
     public LocalList(Class<T> clazz) {
@@ -57,12 +60,12 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * @param tableName 表名
      * @param columns 列定义
      */
-    public LocalList(Class<T> clazz, String tableName, List<LocalColumn> columns) {
+    public LocalList(Class<T> clazz, String tableName, List<LocalColumnForMap> columnsForMap) {
         this.clazz = clazz;
-        this.columns = columns;
+        this.columns = columnsForMap.stream().map(LocalColumnForMap::getSinkColumn).collect(Collectors.toList());
         
         // 创建数据库操作对象
-        this.databaseOpt = DatabaseFactory.createDatabaseOpt(clazz, tableName, columns);
+        this.databaseOpt = DatabaseFactory.createDatabaseOpt(clazz, tableName, columnsForMap);
         
 //        // 创建表
 //        databaseOpt.createTable(tableName, columns);

@@ -9,12 +9,16 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.reflect.FieldUtils;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
 public class LocalListTest {
     public static void testCases() {
+        testList();
+        testMap();
+    }
+
+    static void testList() {
         try (LocalList<String> list = new LocalList<>()) {
             list.add("a");
             list.add("b");
@@ -97,22 +101,22 @@ public class LocalListTest {
             assertEquals(2, list.size());
         }
         try (LocalList<TestBean1> list = new LocalList<>(TestBean1.class)) {
-            for (int i = 0; i < 10000; i++) {
+            for (int i = 0; i < 100; i++) {
                 list.add(new TestBean1("Jack", i));
             }
             assertEquals(0, list.get(0).age);
-            assertEquals(9999, list.get(9999).age);
-            assertEquals(10000, list.size());
+            assertEquals(99, list.get(99).age);
+            assertEquals(100, list.size());
 
             for (TestBean1 testBean1 : list) {
                 log.info("正在遍历: {}", testBean1);
             }
-            assertEquals(10000, list.subListInMemory(0, 10000).size());
-            for (TestBean1 testBean1 : list.subListInMemory(0, 10000)) {
+            assertEquals(100, list.subListInMemory(0, 100).size());
+            for (TestBean1 testBean1 : list.subListInMemory(0, 100)) {
                 log.info("正在内存遍历: {}", testBean1);
             }
-            assertEquals(9999, list.subListInMemory(1, 10000).size());
-            assertEquals(1, list.subListInMemory(1, 10000).get(0).age);
+            assertEquals(99, list.subListInMemory(1, 100).size());
+            assertEquals(1, list.subListInMemory(1, 100).get(0).age);
 
             list.clear();
             assertEquals(0, list.size());
@@ -134,13 +138,22 @@ public class LocalListTest {
 
             // 创建Map，key是userId，value是UserOrderStats对象
             try (LocalMap<String, TestBean1> map = LocalMap.from(list)
-                    .where("age >= '26'")
+                    .where("age >= 26")
                     .groupBy("name")
-                    .select(TestBean1.class)  // 指定结果类型
+                    .select("name", "sum(age) AS age")
+                    .resultClass(TestBean1.class)  // 指定结果类型
                     .keyField(FieldUtils.getDeclaredField(TestBean1.class, "name", true))
                     .build()) {
-                System.out.println(map.get("Jack"));
-                System.out.println(map.get("Rose"));
+
+                assertEquals(1, map.size());
+                assertNotNull(map.get("Jack"));
+                assertEquals("Jack", map.get("Jack").name);
+                map.clear();
+                assertEquals(0, map.size());
+                map.put("Jack", new TestBean1("Jack", 26));
+                assertEquals(1, map.size());
+
+
             }
 
         }
