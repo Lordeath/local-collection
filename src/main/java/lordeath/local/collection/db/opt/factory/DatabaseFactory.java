@@ -12,6 +12,9 @@ import java.util.List;
 
 import static lordeath.local.collection.db.config.MainConfig.CONST_DB_ENGINE;
 
+/**
+ * 数据库操作对象工厂
+ */
 @Slf4j
 public class DatabaseFactory {
     

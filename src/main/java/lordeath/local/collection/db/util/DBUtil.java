@@ -1,21 +1,31 @@
 package lordeath.local.collection.db.util;
 
-import lordeath.local.collection.db.bean.LocalColumn;
-import lordeath.local.collection.db.bean.LocalColumnForMap;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
+import lordeath.local.collection.db.bean.LocalColumn;
+import lordeath.local.collection.db.bean.LocalColumnForMap;
 
 import javax.sql.DataSource;
 import java.lang.reflect.Field;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
+import java.util.Date;
 import java.util.*;
 
+/**
+ * 数据库工具类
+ */
 @Slf4j
 public class DBUtil {
+    /**
+     * 添加数据
+     *
+     * @param obj        数据
+     * @param tableName  表名
+     * @param columns    列定义
+     * @param dataSource 数据源
+     * @param <T>        数据类型
+     * @return 是否添加成功
+     */
     public static <T> boolean add(T obj, String tableName, List<LocalColumn> columns, DataSource dataSource) {
         // 通过表名和列名,拼接sql
         StringBuilder sql = new StringBuilder("insert into ").append(tableName).append(" (");
@@ -49,6 +59,16 @@ public class DBUtil {
         return DBUtil.executeSql(dataSource, sql.toString());
     }
 
+    /**
+     * 批量添加数据
+     *
+     * @param c          数据
+     * @param tableName  表名
+     * @param columns    列定义
+     * @param dataSource 数据源
+     * @param <T>        数据类型
+     * @return 是否添加成功
+     */
     public static <T> boolean addAll(Collection<? extends T> c, String tableName, List<LocalColumn> columns, DataSource dataSource) {
         // 使用批量插入
         StringBuilder sql = new StringBuilder("insert into ").append(tableName).append(" (");
@@ -82,6 +102,18 @@ public class DBUtil {
         return DBUtil.executeSql(dataSource, sql.toString());
     }
 
+    /**
+     * 删除数据
+     *
+     * @param index        索引
+     * @param tableName    表名
+     * @param pkColumnName 主键列名
+     * @param columns      列定义
+     * @param dataSource   数据源
+     * @param clazz        数据类型
+     * @param <T>          数据类型
+     * @return 删除的数据
+     */
     public static <T> T remove(int index, String tableName, String pkColumnName, List<LocalColumn> columns, DataSource dataSource, Class<T> clazz) {
         // 通过index找到id，然后通过id进行删除
         Long id = pk(index, tableName, pkColumnName, dataSource);
@@ -94,6 +126,18 @@ public class DBUtil {
         return t;
     }
 
+    /**
+     * 获取数据
+     *
+     * @param index        索引
+     * @param tableName    表名
+     * @param columns      列定义
+     * @param pkColumnName 主键列名
+     * @param dataSource   数据源
+     * @param clazz        数据类型
+     * @param <T>          数据类型
+     * @return 数据
+     */
     public static <T> T get(int index, String tableName, List<LocalColumn> columns, String pkColumnName, DataSource dataSource, Class<T> clazz) {
         // 通过主键进行排序，然后查询，limit offset 1
         // 拼接sql
@@ -103,6 +147,18 @@ public class DBUtil {
         return DBUtil.querySingle(dataSource, sql.toString(), columns, clazz);
     }
 
+    /**
+     * 批量查询数据
+     * @param fromIndex 起始索引(包含)
+     * @param toIndex 结束索引(不包含)
+     * @param tableName 表名
+     * @param columns 列定义
+     * @param pkColumnName 主键列名
+     * @param dataSource 数据源
+     * @param clazz 数据类型
+     * @return 数据
+     * @param <T> 数据类型
+     */
     public static <T> List<T> batchQuery(int fromIndex, int toIndex, String tableName, List<LocalColumn> columns,
                                          String pkColumnName, DataSource dataSource, Class<T> clazz) {
         // 通过主键进行排序，然后使用 LIMIT 和 OFFSET 进行批量查询
@@ -141,6 +197,12 @@ public class DBUtil {
         return result;
     }
 
+    /**
+     * 执行sql
+     * @param dataSource 数据源
+     * @param sql sql
+     * @return 执行结果
+     */
     public static boolean executeSql(DataSource dataSource, String sql) {
         try (Connection connection = dataSource.getConnection();
              Statement statement = connection.createStatement()) {
@@ -151,6 +213,15 @@ public class DBUtil {
         }
     }
 
+    /**
+     * 查询单个数据
+     * @param dataSource 数据源
+     * @param sql sql
+     * @param columns 列定义
+     * @param clazz 数据类型
+     * @return 数据
+     * @param <T> 数据类型
+     */
     public static <T> T querySingle(DataSource dataSource, String sql, List<LocalColumn> columns, Class<T> clazz) {
         // 通过数据源进行查询，返回一个对象
         try (Connection connection = dataSource.getConnection();
@@ -213,6 +284,12 @@ public class DBUtil {
         }
     }
 
+    /**
+     * 查询数据量
+     * @param tableName 表名
+     * @param dataSource 数据源
+     * @return 数据量
+     */
     public static Integer size(String tableName, DataSource dataSource) {
         // 查询表的数据量
         StringBuilder sql = new StringBuilder("select count(*) AS count from ").append(tableName);
@@ -220,6 +297,11 @@ public class DBUtil {
         return DBUtil.querySingle(dataSource, sql.toString(), Lists.newArrayList(new LocalColumn("count", Integer.class, "INT", null)), Integer.class);
     }
 
+    /**
+     * 删除表
+     * @param tableName 表名
+     * @param dataSource 数据源
+     */
     public static void extracted(String tableName, DataSource dataSource) {
         // 删除表的数据
         StringBuilder sql = new StringBuilder("drop table ").append(tableName);
@@ -227,6 +309,11 @@ public class DBUtil {
         DBUtil.executeSql(dataSource, sql.toString());
     }
 
+    /**
+     * 清空表
+     * @param tableName 表名
+     * @param dataSource 数据源
+     */
     public static void clear(String tableName, DataSource dataSource) {
         // 删除表的数据
         StringBuilder sql = new StringBuilder("truncate table ").append(tableName);
@@ -234,6 +321,17 @@ public class DBUtil {
         DBUtil.executeSql(dataSource, sql.toString());
     }
 
+    /**
+     * 更新数据
+     * @param index 索引
+     * @param element 数据
+     * @param tableName 表名
+     * @param columns 列定义
+     * @param pkColumnName 主键列名
+     * @param dataSource 数据源
+     * @return 数据
+     * @param <T> 数据类型
+     */
     public static <T> T set(int index, T element, String tableName, List<LocalColumn> columns, String pkColumnName, DataSource dataSource) {
         // 查出原有的数据的id，然后进行更新
         Long id = pk(index, tableName, pkColumnName, dataSource);
@@ -266,6 +364,14 @@ public class DBUtil {
         return element;
     }
 
+    /**
+     * 获取主键
+     * @param index 索引
+     * @param tableName 表名
+     * @param pkColumnName 主键列名
+     * @param dataSource 数据源
+     * @return 主键
+     */
     public static long pk(int index, String tableName, String pkColumnName, DataSource dataSource) {
         // 查出原有的数据的id，然后进行更新
         StringBuilder sql = new StringBuilder("select ").append(pkColumnName).append(" from ")
@@ -278,6 +384,12 @@ public class DBUtil {
         return id;
     }
 
+    /**
+     * setParameters
+     * @param stmt PreparedStatement
+     * @param params 参数
+     * @throws SQLException 异常
+     */
     private static void setParameters(PreparedStatement stmt, Object... params) throws SQLException {
         for (int i = 0; i < params.length; i++) {
             stmt.setObject(i + 1, params[i]);
@@ -299,6 +411,14 @@ public class DBUtil {
         return obj;
     }
 
+    /**
+     * 创建分组表
+     * @param dataSource 数据源
+     * @param tableName 表名
+     * @param keyColumn key列名
+     * @param resultColumns 结果列
+     * @return 是否创建成功
+     */
     public static boolean createGroupedTable(DataSource dataSource, String tableName,
                                              String keyColumn, List<LocalColumn> resultColumns) {
         StringBuilder createTableSql = new StringBuilder();
@@ -342,6 +462,11 @@ public class DBUtil {
         }
     }
 
+    /**
+     * 获取SQL类型
+     * @param javaType Java类型
+     * @return SQL类型
+     */
     public static String getSqlType(Class<?> javaType) {
         if (String.class.equals(javaType)) {
             return "VARCHAR";
@@ -358,10 +483,19 @@ public class DBUtil {
         } else if (Date.class.equals(javaType)) {
             return "TIMESTAMP";
         }
-//        return "VARCHAR(255)"; // 默认类型
         throw new UnsupportedOperationException("不支持的数据类型，请联系开发: " + javaType);
     }
 
+    /**
+     * 插入分组数据
+     * @param dataSource 数据源
+     * @param sourceTableName 源表名
+     * @param targetTableName 目标表名
+     * @param groupByColumns 分组列
+     * @param whereClause where条件
+     * @param columnForMapList 列映射
+     * @return 是否插入成功
+     */
     public static boolean insertGroupedData(DataSource dataSource, String sourceTableName,
                                             String targetTableName, List<String> groupByColumns,
                                             String whereClause,
@@ -403,6 +537,17 @@ public class DBUtil {
         }
     }
 
+    /**
+     * 获取对象
+     * @param dataSource 数据源
+     * @param tableName 表名
+     * @param keyColumn key列名
+     * @param keyValue key值
+     * @param columns 列定义
+     * @param clazz 类型
+     * @param <T> 类型
+     * @return 对象
+     */
     public static <T> T getByKey(DataSource dataSource, String tableName, String keyColumn,
                                  Object keyValue, List<LocalColumn> columns, Class<T> clazz) {
         String sql = String.format("SELECT * FROM %s WHERE %s = ?", tableName, keyColumn);
@@ -424,7 +569,19 @@ public class DBUtil {
         return null;
     }
 
-
+    /**
+     * 通过key获取对象
+     * @param dataSource 数据源
+     * @param tableName 表名
+     * @param keyColumn key列名
+     * @param key key值
+     * @param value value值
+     * @param columns 列定义
+     * @param clazz 类型
+     * @param <K> key类型
+     * @param <V> value类型
+     * @return value
+     */
     public static <K, V> V putByKey(DataSource dataSource, String tableName, String keyColumn, K key, V value, List<LocalColumn> columns, Class<V> clazz) {
         V v = getByKey(dataSource, tableName, keyColumn, key, columns, clazz);
         if (v != null) {
@@ -435,6 +592,14 @@ public class DBUtil {
         return value;
     }
 
+    /**
+     * 通过key删除对象
+     * @param dataSource 数据源
+     * @param tableName 表名
+     * @param keyColumn key列名
+     * @param keyValue key值
+     * @return 是否删除成功
+     */
     public static boolean removeByKey(DataSource dataSource, String tableName, String keyColumn, Object keyValue) {
         String sql = String.format("DELETE FROM %s WHERE %s = ?", tableName, keyColumn);
 
@@ -449,6 +614,13 @@ public class DBUtil {
         }
     }
 
+    /**
+     * 获取所有key
+     * @param dataSource 数据源
+     * @param tableName 表名
+     * @param keyColumn key列名
+     * @return key列表
+     */
     public static List<String> getAllKeys(DataSource dataSource, String tableName, String keyColumn) {
         String sql = String.format("SELECT DISTINCT %s FROM %s", keyColumn, tableName);
         List<String> keys = new ArrayList<>();
@@ -464,98 +636,8 @@ public class DBUtil {
         } catch (Exception e) {
             throw new RuntimeException("Failed to get all keys", e);
         }
-
         return keys;
     }
 
-    public static boolean createIndex(DataSource dataSource, String tableName, String indexName, String columnName) {
-        String sql = String.format("CREATE INDEX %s ON %s(%s)", indexName, tableName, columnName);
-
-        try (Connection connection = dataSource.getConnection();
-             Statement stmt = connection.createStatement()) {
-            stmt.execute(sql);
-            return true;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create index", e);
-        }
-    }
-
-    public static boolean createTable(DataSource dataSource, String tableName, List<LocalColumn> columns) {
-        StringBuilder createTableSql = new StringBuilder();
-        createTableSql.append("CREATE TABLE ").append(tableName).append(" (");
-
-        boolean first = true;
-        for (LocalColumn column : columns) {
-            if (!first) {
-                createTableSql.append(", ");
-            }
-            createTableSql.append(column.getColumnName())
-                    .append(" ")
-                    .append(column.getDbType());
-            first = false;
-        }
-
-        createTableSql.append(")");
-
-        log.debug("Creating table with SQL: {}", createTableSql);
-
-        try (Connection connection = dataSource.getConnection();
-             Statement stmt = connection.createStatement()) {
-            stmt.execute(createTableSql.toString());
-            return true;
-        } catch (Exception e) {
-            log.error("Failed to create table: {}", e.getMessage());
-            throw new RuntimeException("Failed to create table", e);
-        }
-    }
-
-    public static boolean insert(DataSource dataSource, String tableName, Object value, List<LocalColumn> columns) {
-        StringBuilder insertSql = new StringBuilder();
-        insertSql.append("INSERT INTO ").append(tableName).append(" (");
-
-        // 构建列名部分
-        boolean first = true;
-        for (LocalColumn column : columns) {
-            if (!first) {
-                insertSql.append(", ");
-            }
-            insertSql.append(column.getColumnName());
-            first = false;
-        }
-
-        insertSql.append(") VALUES (");
-
-        // 构建参数占位符
-        first = true;
-        for (int i = 0; i < columns.size(); i++) {
-            if (!first) {
-                insertSql.append(", ");
-            }
-            insertSql.append("?");
-            first = false;
-        }
-
-        insertSql.append(")");
-
-        log.debug("Inserting data with SQL: {}", insertSql);
-
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement stmt = connection.prepareStatement(insertSql.toString())) {
-
-            // 设置参数值
-            int paramIndex = 1;
-            for (LocalColumn column : columns) {
-                Field field = column.getField();
-                field.setAccessible(true);
-                Object fieldValue = field.get(value);
-                stmt.setObject(paramIndex++, fieldValue);
-            }
-
-            return stmt.executeUpdate() > 0;
-        } catch (Exception e) {
-            log.error("Failed to insert data: {}", e.getMessage());
-            throw new RuntimeException("Failed to insert data", e);
-        }
-    }
 
 }

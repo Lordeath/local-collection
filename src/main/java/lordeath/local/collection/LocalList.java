@@ -29,10 +29,25 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     @Getter
     private List<LocalColumn> columns;
 
+    /**
+     * 创建一个空的LocalList
+     */
+    public LocalList() {
+        databaseOpt = null;
+    }
+
+    /**
+     * 使用指定的列定义创建LocalList
+     * @param clazz 元素类型
+     */
     public LocalList(Class<T> clazz) {
         init(clazz);
     }
 
+    /**
+     * 使用指定的列定义创建LocalList
+     * @param clazz 元素类型
+     */
     private void init(Class<T> clazz) {
         String dbEngine = System.getProperty(CONST_DB_ENGINE);
         if (dbEngine == null || "h2".equalsIgnoreCase(dbEngine)) {
@@ -65,9 +80,6 @@ public class LocalList<T> implements AutoCloseable, List<T> {
 //        databaseOpt.createTable(tableName, columns);
     }
 
-    public LocalList() {
-        databaseOpt = null;
-    }
 
     @Override
     public void close() {

@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 /**
  * 通过操作H2来实现对数据的操作，注意，这个类是线程不安全的
  *
- * @param <T>
+ * @param <T> 元素类型
  */
 @Slf4j
 public class H2Opt<T> implements IDatabaseOpt<T> {

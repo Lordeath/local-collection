@@ -7,7 +7,16 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ *
+ */
 public class ColumnNameUtil {
+    /**
+     * 获取字段
+     *
+     * @param clazz 类
+     * @return 字段列表
+     */
     public static List<LocalColumn> getFields(Class<?> clazz) {
         // 通过class的反射获取到字段名称以及类型
         LocalColumn simpleColumn = getLocalColumns(clazz, "simpleColumn", null);
@@ -28,6 +37,13 @@ public class ColumnNameUtil {
         return list;
     }
 
+    /**
+     * 获取字段
+     * @param clazz 类
+     * @param fieldName 字段名称
+     * @param field 字段
+     * @return 字段
+     */
     private static LocalColumn getLocalColumns(Class<?> clazz, String fieldName, Field field) {
         // 我担心不同的jdk的适配性，所以这里转换成String来做比较
         String className = clazz.getName();
