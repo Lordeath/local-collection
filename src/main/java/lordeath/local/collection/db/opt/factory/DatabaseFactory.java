@@ -22,7 +22,7 @@ public class DatabaseFactory {
      * 创建数据库操作对象
      * @param clazz 元素类型
      * @param tableName 表名
-     * @param columns 列定义
+     * @param columnsForMap 列映射定义
      * @return 数据库操作对象
      * @param <T> 元素类型
      */

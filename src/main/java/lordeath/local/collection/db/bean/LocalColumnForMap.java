@@ -2,6 +2,10 @@ package lordeath.local.collection.db.bean;
 
 import lombok.Data;
 
+/**
+ * 数据库列映射定义类
+ * 用于定义源表和目标表之间的列映射关系
+ */
 @Data
 public class LocalColumnForMap {
 //    // 记录数据源的格式相关的东西

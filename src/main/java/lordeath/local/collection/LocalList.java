@@ -67,7 +67,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * 使用指定的列定义创建LocalList
      * @param clazz 元素类型
      * @param tableName 表名
-     * @param columns 列定义
+     * @param columnsForMap 列映射定义
      */
     public LocalList(Class<T> clazz, String tableName, List<LocalColumnForMap> columnsForMap) {
         this.clazz = clazz;

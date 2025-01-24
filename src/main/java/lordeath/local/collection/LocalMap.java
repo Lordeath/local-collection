@@ -11,11 +11,9 @@ import java.lang.reflect.Field;
 import java.util.*;
 
 /**
- * 一个基于数据库的Map实现，继承自LocalList
- * 通过在数据库中创建索引来支持快速查找
- *
- * @param <K> Map的键类型，通常是String
- * @param <V> Map的值类型，必须是一个JavaBean类
+ * 本地Map实现，基于数据库存储
+ * @param <K> 键类型
+ * @param <V> 值类型
  */
 @Slf4j
 public class LocalMap<K, V> implements Map<K, V>, AutoCloseable {
@@ -108,10 +106,20 @@ public class LocalMap<K, V> implements Map<K, V>, AutoCloseable {
         innerList.close();
     }
 
+    /**
+     * 创建MapBuilder实例
+     * @param source 源数据列表
+     * @param <T> 数据类型
+     * @return MapBuilder实例
+     */
     public static <T> MapBuilder<T> from(LocalList<T> source) {
         return new MapBuilder<>(source);
     }
 
+    /**
+     * Map构建器类
+     * @param <T> 数据类型
+     */
     public static class MapBuilder<T> {
         private final LocalList<T> source;
         private String whereClause;
@@ -126,32 +134,62 @@ public class LocalMap<K, V> implements Map<K, V>, AutoCloseable {
             selectColumns = new ArrayList<>();
         }
 
-        public MapBuilder<T> where(String whereClause) {
-            this.whereClause = whereClause;
-            return this;
-        }
-
+        /**
+         * 设置分组字段
+         * @param columns 分组字段列表
+         * @return 当前构建器实例
+         */
         public MapBuilder<T> groupBy(String... columns) {
             groupByColumns.addAll(Arrays.asList(columns));
             return this;
         }
 
+        /**
+         * 设置过滤条件
+         * @param whereClause 过滤条件
+         * @return 当前构建器实例
+         */
+        public MapBuilder<T> where(String whereClause) {
+            this.whereClause = whereClause;
+            return this;
+        }
 
+        /**
+         * 设置选择字段
+         * @param columns 选择字段列表
+         * @return 当前构建器实例
+         */
         public MapBuilder<T> select(String... columns) {
             selectColumns.addAll(Arrays.asList(columns));
             return this;
         }
 
+        /**
+         * 设置结果类型
+         * @param resultClass 结果类型
+         * @return 当前构建器实例
+         */
         public MapBuilder<T> resultClass(Class<?> resultClass) {
             this.resultClass = resultClass;
             return this;
         }
 
+        /**
+         * 设置键字段
+         * @param keyField 键字段
+         * @return 当前构建器实例
+         */
         public MapBuilder<T> keyField(Field keyField) {
             this.keyField = keyField;
             return this;
         }
 
+        /**
+         * 构建LocalMap实例
+         * @param <K> 键类型
+         * @param <V> 值类型
+         * @return LocalMap实例
+         */
         @SuppressWarnings("unchecked")
         public <K, V> LocalMap<K, V> build() {
             // 生成新表名和key列名

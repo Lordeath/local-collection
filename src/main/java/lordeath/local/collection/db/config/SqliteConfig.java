@@ -9,15 +9,33 @@ import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
 
+/**
+ * SQLite数据库配置类
+ */
 public class SqliteConfig {
-    // 用于配置sqlite的文件路径，注意，这个目录不可以和其他微服务共享，否则会出现数据不一致的问题
+    /**
+     * SQLite数据库文件路径配置键
+     */
     public static final String CONST_SQLITE_FILE_PATH = "lordeath.local.collection.sqlite.file.path";
+    /**
+     * SQLite数据库默认文件路径
+     */
     public static final String DEFAULT_SQLITE_FILE_PATH = "./local_collection/sqlite/fxm_local_collection_";
+    /**
+     * SQLite数据库用户名配置键
+     */
     public static final String CONST_SQLITE_USERNAME = "lordeath.local.collection.sqlite.file.username";
+    /**
+     * SQLite数据库密码配置键
+     */
     public static final String CONST_SQLITE_PASSWORD = "lordeath.local.collection.sqlite.file.password";
 
     private static DataSource dataSource;
 
+    /**
+     * 获取SQLite数据库数据源
+     * @return SQLite数据库数据源
+     */
     public static DataSource getDataSource() {
         if (dataSource != null) {
             return dataSource;
@@ -26,6 +44,9 @@ public class SqliteConfig {
         return dataSource;
     }
 
+    /**
+     * 初始化SQLite数据库数据源
+     */
     private static synchronized void init() {
         String filePath = System.getProperty(CONST_SQLITE_FILE_PATH);
         if (StringUtils.isBlank(filePath)) {

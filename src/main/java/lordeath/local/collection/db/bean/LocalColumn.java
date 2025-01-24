@@ -4,6 +4,10 @@ import lombok.Data;
 
 import java.lang.reflect.Field;
 
+/**
+ * 数据库列定义类
+ * 用于定义数据库表的列名、类型等信息
+ */
 @Data
 public class LocalColumn {
     private final String columnName;

@@ -6,15 +6,33 @@ import org.apache.commons.lang3.StringUtils;
 import javax.sql.DataSource;
 import java.time.LocalDate;
 
+/**
+ * HSQLDB数据库配置类
+ */
 public class HSQLDBConfig {
-    // 用于配置HSQLDB的文件路径，注意，这个目录不可以和其他微服务共享，否则会出现数据不一致的问题
+    /**
+     * HSQLDB数据库文件路径配置键
+     */
     public static final String CONST_HSQLDB_FILE_PATH = "lordeath.local.collection.hsqldb.file.path";
+    /**
+     * HSQLDB数据库默认文件路径
+     */
     public static final String DEFAULT_HSQLDB_FILE_PATH = "./local_collection/hsqldb/fxm_local_collection_";
+    /**
+     * HSQLDB数据库用户名配置键
+     */
     public static final String CONST_HSQLDB_USERNAME = "lordeath.local.collection.hsqldb.file.username";
+    /**
+     * HSQLDB数据库密码配置键
+     */
     public static final String CONST_HSQLDB_PASSWORD = "lordeath.local.collection.hsqldb.file.password";
 
     private static DataSource dataSource;
 
+    /**
+     * 获取HSQLDB数据库数据源
+     * @return HSQLDB数据库数据源
+     */
     public static DataSource getDataSource() {
         if (dataSource != null) {
             return dataSource;
@@ -23,6 +41,9 @@ public class HSQLDBConfig {
         return dataSource;
     }
 
+    /**
+     * 初始化HSQLDB数据库数据源
+     */
     private static synchronized void init() {
         String filePath = System.getProperty(CONST_HSQLDB_FILE_PATH);
         if (StringUtils.isBlank(filePath)) {

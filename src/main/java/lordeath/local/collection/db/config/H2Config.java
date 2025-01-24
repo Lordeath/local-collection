@@ -6,15 +6,33 @@ import org.apache.commons.lang3.StringUtils;
 import javax.sql.DataSource;
 import java.time.LocalDate;
 
+/**
+ * H2数据库配置类
+ */
 public class H2Config {
-    // 用于配置h2的文件路径，注意，这个目录不可以和其他微服务共享，否则会出现数据不一致的问题
+    /**
+     * H2数据库文件路径配置键
+     */
     public static final String CONST_H2_FILE_PATH = "lordeath.local.collection.h2.file.path";
+    /**
+     * H2数据库默认文件路径
+     */
     public static final String DEFAULT_H2_FILE_PATH = "./local_collection/h2/fxm_local_collection_";
+    /**
+     * H2数据库用户名配置键
+     */
     public static final String CONST_H2_USERNAME = "lordeath.local.collection.h2.file.username";
+    /**
+     * H2数据库密码配置键
+     */
     public static final String CONST_H2_PASSWORD = "lordeath.local.collection.h2.file.password";
 
     private static DataSource dataSource;
 
+    /**
+     * 获取H2数据库数据源
+     * @return H2数据库数据源
+     */
     public static DataSource getDataSource() {
         if (dataSource != null) {
             return dataSource;
@@ -23,6 +41,9 @@ public class H2Config {
         return dataSource;
     }
 
+    /**
+     * 初始化H2数据库数据源
+     */
     private static synchronized void init() {
         String filePath = System.getProperty(CONST_H2_FILE_PATH);
         if (StringUtils.isBlank(filePath)) {

@@ -9,15 +9,33 @@ import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
 
+/**
+ * Derby数据库配置类
+ */
 public class DerbyConfig {
-    // 用于配置derby的文件路径，注意，这个目录不可以和其他微服务共享，否则会出现数据不一致的问题
+    /**
+     * Derby数据库文件路径配置键
+     */
     public static final String CONST_DERBY_FILE_PATH = "lordeath.local.collection.derby.file.path";
+    /**
+     * Derby数据库默认文件路径
+     */
     public static final String DEFAULT_DERBY_FILE_PATH = "./local_collection/derby/fxm_local_collection_";
+    /**
+     * Derby数据库用户名配置键
+     */
     public static final String CONST_DERBY_USERNAME = "lordeath.local.collection.derby.file.username";
+    /**
+     * Derby数据库密码配置键
+     */
     public static final String CONST_DERBY_PASSWORD = "lordeath.local.collection.derby.file.password";
 
     private static DataSource dataSource;
 
+    /**
+     * 获取Derby数据库数据源
+     * @return Derby数据库数据源
+     */
     public static DataSource getDataSource() {
         if (dataSource != null) {
             return dataSource;
@@ -26,6 +44,9 @@ public class DerbyConfig {
         return dataSource;
     }
 
+    /**
+     * 初始化Derby数据库数据源
+     */
     private static synchronized void init() {
         String filePath = System.getProperty(CONST_DERBY_FILE_PATH);
         if (StringUtils.isBlank(filePath)) {
