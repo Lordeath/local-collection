@@ -73,7 +73,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         databaseOpt.close();
     }
 

@@ -103,7 +103,7 @@ public class LocalMap<K, V> implements Map<K, V>, AutoCloseable {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         innerList.close();
     }
 

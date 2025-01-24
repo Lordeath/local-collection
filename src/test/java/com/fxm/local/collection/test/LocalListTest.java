@@ -14,34 +14,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Slf4j
 public class LocalListTest {
-    public static void testCases() throws Exception {
+    public static void testCases() {
         try (LocalList<String> list = new LocalList<>()) {
             list.add("a");
             list.add("b");
             assertEquals(2, list.size());
             assertEquals("a", list.get(0));
             assertEquals("b", list.get(1));
-        }
-        try (LocalList<TestBean1> list = new LocalList<>()) {
-            list.add(new TestBean1("Jack", 26));
-            list.add(new TestBean1("Rose", 25));
-            assertEquals(2, list.size());
-            assertEquals("Jack", list.get(0).name);
-            assertEquals(26, list.get(0).age);
-            assertEquals("Rose", list.get(1).name);
-            assertEquals(25, list.get(1).age);
-
-            // 创建Map，key是userId，value是UserOrderStats对象
-            try (LocalMap<String, TestBean1> map = LocalMap.from(list)
-                    .where("age >= '26'")
-                    .groupBy("name")
-                    .select(TestBean1.class)  // 指定结果类型
-                    .keyField(FieldUtils.getDeclaredField(TestBean1.class, "name", true))
-                    .build()) {
-                System.out.println(map.get("Jack"));
-                System.out.println(map.get("Rose"));
-            }
-
         }
 
         try (LocalList<String> list = new LocalList<>(String.class)) {
@@ -139,6 +118,31 @@ public class LocalListTest {
             assertEquals(0, list.size());
             list.add(new TestBean1("Jack", 0));
             assertEquals(1, list.size());
+        }
+    }
+
+    public static void testMap() {
+
+        try (LocalList<TestBean1> list = new LocalList<>()) {
+            list.add(new TestBean1("Jack", 26));
+            list.add(new TestBean1("Rose", 25));
+            assertEquals(2, list.size());
+            assertEquals("Jack", list.get(0).name);
+            assertEquals(26, list.get(0).age);
+            assertEquals("Rose", list.get(1).name);
+            assertEquals(25, list.get(1).age);
+
+            // 创建Map，key是userId，value是UserOrderStats对象
+            try (LocalMap<String, TestBean1> map = LocalMap.from(list)
+                    .where("age >= '26'")
+                    .groupBy("name")
+                    .select(TestBean1.class)  // 指定结果类型
+                    .keyField(FieldUtils.getDeclaredField(TestBean1.class, "name", true))
+                    .build()) {
+                System.out.println(map.get("Jack"));
+                System.out.println(map.get("Rose"));
+            }
+
         }
     }
 
