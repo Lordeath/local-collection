@@ -359,7 +359,8 @@ public class DBUtil {
         } else if (Date.class.equals(javaType)) {
             return "TIMESTAMP";
         }
-        return "VARCHAR(255)"; // 默认类型
+//        return "VARCHAR(255)"; // 默认类型
+        throw new UnsupportedOperationException("不支持的数据类型，请联系开发: " + javaType);
     }
 
     public static boolean insertGroupedData(DataSource dataSource, String sourceTableName,
