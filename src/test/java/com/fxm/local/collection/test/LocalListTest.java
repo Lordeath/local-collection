@@ -33,10 +33,6 @@ public class LocalListTest {
             assertEquals(2, list.size());
             assertEquals("a", list.get(0));
             assertEquals("b", list.get(1));
-            for (String s : list) {
-                System.out.println(s);
-            }
-
 
             assertEquals(1, list.subListInMemory(0, 1).size());
             assertEquals(2, list.subListInMemory(0, 2).size());

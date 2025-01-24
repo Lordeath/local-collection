@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>fxm</groupId>
+    <groupId>lordeath</groupId>
     <artifactId>local-collection</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
@@ -14,6 +14,26 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <maven.compiler.source>1.8</maven.compiler.source>
     </properties>
+
+    <distributionManagement>
+        <repository>
+            <id>ossrh</id>
+            <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
+
+    <scm>
+        <connection>scm:git:git://github.com/Lordeath/local-collection.git</connection>
+        <developerConnection>scm:git:ssh://github.com/Lordeath/local-collection.git</developerConnection>
+        <url>https://github.com/Lordeath/local-collection</url>
+    </scm>
+    <developers>
+        <developer>
+            <id>lordeath</id>
+            <name>lordeath</name>
+            <email>407522434@qq.com</email>
+        </developer>
+    </developers>
 
     <dependencies>
         <!-- https://mvnrepository.com/artifact/com.h2database/h2 -->

@@ -37,7 +37,7 @@ public class DerbyConfig {
             filePath = DEFAULT_DERBY_FILE_PATH + date;
         }
         try {
-            FileUtils.forceMkdirParent(new File(filePath));
+            FileUtils.forceMkdir(new File(filePath));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

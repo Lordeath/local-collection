@@ -1,9 +1,9 @@
 /.settings/
 /.classpath
 /.project
+/.vscode
 /target/
 /logs/
-/.project
 /jxl.log
 .factorypath
 .idea

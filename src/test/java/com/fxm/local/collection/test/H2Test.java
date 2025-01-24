@@ -28,9 +28,4 @@ public class H2Test {
         testCases();
     }
 
-    @Test
-    public void testMap() {
-        LocalListTest.testMap();
-    }
-
 }
