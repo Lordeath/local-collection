@@ -2,7 +2,7 @@
 
 基本思路是使用H2或者SQLite等本地数据库，优先使用H2，之后也会考虑集成其他的数据库引擎
 
-已经完成了一些基础的操作，操作方法详见[H2Test](src/test/java/com/lordeath/local/collection/test/H2Test.java)
+已经完成了一些基础的操作，操作方法详见[H2Test](src/test/java/lordeath/local/collection/test/H2Test.java)
 
 
 后续想要实现的功能：
