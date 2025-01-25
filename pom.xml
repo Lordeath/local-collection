@@ -222,7 +222,8 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <executable>D:\Program Files (x86)\GnuPG\bin\gpg.exe</executable>
+                    <!-- $env:GPG_EXECUTABLE = "D:\Program Files (x86)\GnuPG\bin\gpg.exe" -->
+                    <executable>${env.GPG_EXECUTABLE}</executable>
                     <passphrase>${env.MAVEN_GPG_PASSPHRASE}</passphrase>
                 </configuration>
             </plugin>
