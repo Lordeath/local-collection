@@ -7,6 +7,7 @@ import lordeath.local.collection.db.bean.LocalColumnForMap;
 
 import javax.sql.DataSource;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.*;
 import java.util.Date;
 import java.util.*;
@@ -27,36 +28,37 @@ public class DBUtil {
      * @return 是否添加成功
      */
     public static <T> boolean add(T obj, String tableName, List<LocalColumn> columns, DataSource dataSource) {
-        // 通过表名和列名,拼接sql
-        StringBuilder sql = new StringBuilder("insert into ").append(tableName).append(" (");
+        StringBuilder sql = new StringBuilder("INSERT INTO ").append(tableName).append(" (");
         for (LocalColumn column : columns) {
             sql.append(column.getColumnName()).append(", ");
         }
         sql.setLength(sql.length() - 2);
-        sql.append(") values (");
-        for (LocalColumn column : columns) {
-            if (column.getField() == null && columns.size() == 1) {
-                sql.append("'").append(obj).append("'").append(", ");
-            } else {
-                Object value;
-                column.getField().setAccessible(true);
-                try {
-                    value = column.getField().get(obj);
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
-                if (Objects.isNull(value) || value instanceof Number) {
-                    sql.append(value).append(", ");
-                } else {
-                    sql.append("'").append(value).append("'").append(", ");
-                }
-            }
+        sql.append(") VALUES (");
+        for (int i = 0; i < columns.size(); i++) {
+            sql.append("?, ");
         }
         sql.setLength(sql.length() - 2);
         sql.append(")");
-        log.info("添加数据的sql: {}", sql);
-        // 执行sql
-        return DBUtil.executeSql(dataSource, sql.toString());
+        log.info("插入数据的sql: {}", sql);
+
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql.toString())) {
+            int parameterIndex = 1;
+            for (LocalColumn column : columns) {
+                if (column.getField() == null && columns.size() == 1) {
+                    // 特殊情况：如果只有一个列且field为null，直接使用对象本身作为值
+                    stmt.setObject(parameterIndex++, obj);
+                } else {
+                    Field field = column.getField();
+                    field.setAccessible(true);
+                    Object value = field.get(obj);
+                    stmt.setObject(parameterIndex++, value);
+                }
+            }
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -70,36 +72,47 @@ public class DBUtil {
      * @return 是否添加成功
      */
     public static <T> boolean addAll(Collection<? extends T> c, String tableName, List<LocalColumn> columns, DataSource dataSource) {
-        // 使用批量插入
-        StringBuilder sql = new StringBuilder("insert into ").append(tableName).append(" (");
+        if (c == null || c.isEmpty()) {
+            return true;
+        }
+        StringBuilder sql = new StringBuilder("INSERT INTO ").append(tableName).append(" (");
         for (LocalColumn column : columns) {
             sql.append(column.getColumnName()).append(", ");
         }
         sql.setLength(sql.length() - 2);
-        sql.append(") values ");
-        for (T t : c) {
-            sql.append("(");
-            for (LocalColumn column : columns) {
-                if (column.getField() == null) {
-                    sql.append("'").append(t).append("'").append(", ");
-                } else {
-                    Object value;
-                    column.getField().setAccessible(true);
-                    try {
-                        value = column.getField().get(t);
-                    } catch (IllegalAccessException e) {
-                        throw new RuntimeException(e);
-                    }
-                    sql.append("'").append(value).append("'").append(", ");
-                }
-            }
-            sql.setLength(sql.length() - 2);
-            sql.append("), ");
+        sql.append(") VALUES (");
+        for (int i = 0; i < columns.size(); i++) {
+            sql.append("?, ");
         }
         sql.setLength(sql.length() - 2);
-        log.info("批量添加数据的sql: {}", sql);
-        // 执行sql
-        return DBUtil.executeSql(dataSource, sql.toString());
+        sql.append(")");
+        log.info("批量插入数据的sql: {}", sql);
+
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql.toString())) {
+            connection.setAutoCommit(false);
+            for (T obj : c) {
+                int parameterIndex = 1;
+                for (LocalColumn column : columns) {
+                    if (column.getField() == null && columns.size() == 1) {
+                        // 特殊情况：如果只有一个列且field为null，直接使用对象本身作为值
+                        stmt.setObject(parameterIndex++, obj);
+                    } else {
+                        Field field = column.getField();
+                        field.setAccessible(true);
+                        Object value = field.get(obj);
+                        stmt.setObject(parameterIndex++, value);
+                    }
+                }
+                stmt.addBatch();
+            }
+            int[] results = stmt.executeBatch();
+            connection.commit();
+            connection.setAutoCommit(true);
+            return Arrays.stream(results).allMatch(result -> result > 0);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -115,15 +128,23 @@ public class DBUtil {
      * @return 删除的数据
      */
     public static <T> T remove(int index, String tableName, String pkColumnName, List<LocalColumn> columns, DataSource dataSource, Class<T> clazz) {
-        // 通过index找到id，然后通过id进行删除
-        Long id = pk(index, tableName, pkColumnName, dataSource);
-        // 拼接sql
-        StringBuilder sql = new StringBuilder("delete from ").append(tableName).append(" where ").append(pkColumnName).append(" = ").append(id);
-        log.info("删除数据的sql: {}", sql);
-        T t = get(index, tableName, columns, pkColumnName, dataSource, clazz);
-        // 执行sql
-        DBUtil.executeSql(dataSource, sql.toString());
-        return t;
+        // 先获取要删除的数据
+        T obj = get(index, tableName, columns, pkColumnName, dataSource, clazz);
+        if (obj == null) {
+            return null;
+        }
+        // 获取主键值
+        Long pk = pk(index, tableName, pkColumnName, dataSource);
+        // 删除数据
+        String sql = "DELETE FROM " + tableName + " WHERE " + pkColumnName + " = ?";
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setLong(1, pk);
+            stmt.executeUpdate();
+            return obj;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -161,38 +182,36 @@ public class DBUtil {
      */
     public static <T> List<T> batchQuery(int fromIndex, int toIndex, String tableName, List<LocalColumn> columns,
                                          String pkColumnName, DataSource dataSource, Class<T> clazz) {
-        // 通过主键进行排序，然后使用 LIMIT 和 OFFSET 进行批量查询
-        StringBuilder sql = new StringBuilder("select * from ")
+        StringBuilder sql = new StringBuilder("SELECT * FROM ")
                 .append(tableName)
-                .append(" order by ")
+                .append(" ORDER BY ")
                 .append(pkColumnName)
-                .append(" limit ")
-                .append(toIndex - fromIndex)
-                .append(" offset ")
-                .append(fromIndex);
+                .append(" LIMIT ? OFFSET ?");
 
         log.info("批量查询数据的sql: {}", sql);
 
         List<T> result = new ArrayList<>();
         try (Connection connection = dataSource.getConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(sql.toString())) {
-
-            while (resultSet.next()) {
-                T obj = clazz.getDeclaredConstructor().newInstance();
-                for (LocalColumn column : columns) {
-                    if (column.getField() != null) {
-                        column.getField().setAccessible(true);
-                        Object value = resultSet.getObject(column.getColumnName());
-                        if (value != null) {
-                            column.getField().set(obj, value);
+             PreparedStatement stmt = connection.prepareStatement(sql.toString())) {
+            stmt.setInt(1, toIndex - fromIndex);
+            stmt.setInt(2, fromIndex);
+            try (ResultSet resultSet = stmt.executeQuery()) {
+                while (resultSet.next()) {
+                    T obj = clazz.getDeclaredConstructor().newInstance();
+                    for (LocalColumn column : columns) {
+                        if (column.getField() != null) {
+                            column.getField().setAccessible(true);
+                            Object value = resultSet.getObject(column.getColumnName());
+                            if (value != null) {
+                                column.getField().set(obj, value);
+                            }
                         }
                     }
+                    result.add(obj);
                 }
-                result.add(obj);
             }
         } catch (Exception e) {
-            throw new RuntimeException("批量查询数据失败", e);
+            throw new RuntimeException(e);
         }
         return result;
     }
@@ -251,7 +270,7 @@ public class DBUtil {
                 return null;
             } else {
                 if (resultSet.next()) {
-                    T t = clazz.newInstance();
+                    T t = clazz.getDeclaredConstructor().newInstance();
                     // 通过sql的返回结果，使用反射来填充这些字段
                     for (LocalColumn column : columns) {
                         Field field = column.getField();
@@ -280,6 +299,10 @@ public class DBUtil {
             }
 
         } catch (SQLException | InstantiationException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        } catch (InvocationTargetException e) {
+            throw new RuntimeException(e);
+        } catch (NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
     }
@@ -315,10 +338,13 @@ public class DBUtil {
      * @param dataSource 数据源
      */
     public static void clear(String tableName, DataSource dataSource) {
-        // 删除表的数据
-        StringBuilder sql = new StringBuilder("truncate table ").append(tableName);
-        log.info("清空表的sql: {}", sql);
-        DBUtil.executeSql(dataSource, sql.toString());
+        String sql = "DELETE FROM " + tableName;
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.executeUpdate();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -333,35 +359,37 @@ public class DBUtil {
      * @param <T> 数据类型
      */
     public static <T> T set(int index, T element, String tableName, List<LocalColumn> columns, String pkColumnName, DataSource dataSource) {
-        // 查出原有的数据的id，然后进行更新
-        Long id = pk(index, tableName, pkColumnName, dataSource);
+        // 获取主键值
+        Long pk = pk(index, tableName, pkColumnName, dataSource);
 
-        // 拼接sql
-        StringBuilder sql = new StringBuilder("update ").append(tableName).append(" set ");
+        // 更新数据
+        StringBuilder sql = new StringBuilder("UPDATE ").append(tableName).append(" SET ");
         for (LocalColumn column : columns) {
-            if (column.getField() == null && columns.size() == 1) {
-                sql.append(column.getColumnName()).append(" = '").append(element).append("', ");
-            } else {
-                Object value;
-                column.getField().setAccessible(true);
-                try {
-                    value = column.getField().get(element);
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
-                if (Objects.isNull(value) || value instanceof Number) {
-                    sql.append(column.getColumnName()).append(" = ").append(value).append(", ");
-                } else {
-                    sql.append(column.getColumnName()).append(" = '").append(value).append("', ");
-                }
-            }
+            sql.append(column.getColumnName()).append(" = ?, ");
         }
         sql.setLength(sql.length() - 2);
-        sql.append(" where ").append(pkColumnName).append(" = ").append(id);
-        log.info("更新数据的sql: {}", sql);
-        // 执行sql
-        DBUtil.executeSql(dataSource, sql.toString());
-        return element;
+        sql.append(" WHERE ").append(pkColumnName).append(" = ?");
+
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql.toString())) {
+            int parameterIndex = 1;
+            for (LocalColumn column : columns) {
+                if (column.getField() == null && columns.size() == 1) {
+                    // 特殊情况：如果只有一个列且field为null，直接使用对象本身作为值
+                    stmt.setObject(parameterIndex++, element);
+                } else {
+                    Field field = column.getField();
+                    field.setAccessible(true);
+                    Object value = field.get(element);
+                    stmt.setObject(parameterIndex++, value);
+                }
+            }
+            stmt.setLong(parameterIndex, pk);
+            stmt.executeUpdate();
+            return element;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -374,8 +402,8 @@ public class DBUtil {
      */
     public static long pk(int index, String tableName, String pkColumnName, DataSource dataSource) {
         // 查出原有的数据的id，然后进行更新
-        StringBuilder sql = new StringBuilder("select ").append(pkColumnName).append(" from ")
-                .append(tableName).append(" order by ").append(pkColumnName).append(" limit 1 offset ").append(index);
+        StringBuilder sql = new StringBuilder("SELECT ").append(pkColumnName).append(" FROM ")
+                .append(tableName).append(" ORDER BY ").append(pkColumnName).append(" LIMIT 1 OFFSET ").append(index);
         log.info("查询数据的id的sql: {}", sql);
         Long id = DBUtil.querySingle(dataSource, sql.toString(), Lists.newArrayList(new LocalColumn(pkColumnName, Long.class, "BIGINT", null)), Long.class);
         if (id == null) {
@@ -502,8 +530,7 @@ public class DBUtil {
                                             List<LocalColumnForMap> columnForMapList) {
         // 构建INSERT语句
         StringBuilder insertSql = new StringBuilder();
-        insertSql.append("INSERT INTO ").append(targetTableName).append(" (")
-        ;
+        insertSql.append("INSERT INTO ").append(targetTableName).append(" (");
 
         for (LocalColumnForMap localColumnForMap : columnForMapList) {
             insertSql.append(localColumnForMap.getSinkColumn().getColumnName()).append(", ");
@@ -518,8 +545,22 @@ public class DBUtil {
         }
         insertSql.setLength(insertSql.length() - 2);
         insertSql.append(" FROM ").append(sourceTableName);
+        
+        List<Object> params = new ArrayList<>();
+        StringBuilder whereBuilder = new StringBuilder();
         if (whereClause != null && !whereClause.isEmpty()) {
-            insertSql.append(" WHERE ").append(whereClause);
+            whereBuilder.append(" WHERE ");
+            // 解析where子句中的参数，将其替换为?
+            String[] parts = whereClause.split("\\s+");
+            for (String part : parts) {
+                if (part.startsWith("'") && part.endsWith("'")) {
+                    params.add(part.substring(1, part.length() - 1));
+                    whereBuilder.append("? ");
+                } else {
+                    whereBuilder.append(part).append(" ");
+                }
+            }
+            insertSql.append(whereBuilder);
         }
 
         if (!groupByColumns.isEmpty()) {
@@ -529,10 +570,15 @@ public class DBUtil {
         log.debug("Inserting data with SQL: {}", insertSql);
 
         try (Connection connection = dataSource.getConnection();
-             Statement stmt = connection.createStatement()) {
-            return stmt.executeUpdate(insertSql.toString()) > 0;
+             PreparedStatement stmt = connection.prepareStatement(insertSql.toString())) {
+            
+            // 设置where子句中的参数
+            for (int i = 0; i < params.size(); i++) {
+                stmt.setObject(i + 1, params.get(i));
+            }
+            
+            return stmt.executeUpdate() > 0;
         } catch (Exception e) {
-            log.error("Failed to insert data: {}", e.getMessage());
             throw new RuntimeException("Failed to insert grouped data", e);
         }
     }
@@ -638,6 +684,4 @@ public class DBUtil {
         }
         return keys;
     }
-
-
 }
