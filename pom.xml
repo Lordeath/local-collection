@@ -221,6 +221,10 @@
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <executable>D:\Program Files (x86)\GnuPG\bin\gpg.exe</executable>
+                    <passphrase>${env.MAVEN_GPG_PASSPHRASE}</passphrase>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.sonatype.central</groupId>
