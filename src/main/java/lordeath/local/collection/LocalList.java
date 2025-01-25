@@ -199,6 +199,14 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         return new LocalListIterator(index);
     }
 
+    /**
+     * 获取一个可以修改的子列表。这个子列表会将数据加载到内存中，提高访问效率。
+     * 注意：对返回的列表的修改不会影响原始列表。
+     *
+     * @param fromIndex 起始索引（包含）
+     * @param toIndex   结束索引（不包含）
+     * @return 包含指定范围元素的新ArrayList
+     */
     @Override
     public List<T> subList(int fromIndex, int toIndex) {
         if (fromIndex < 0)
@@ -213,26 +221,6 @@ public class LocalList<T> implements AutoCloseable, List<T> {
 
         // 返回一个不可修改的List视图
         return Collections.unmodifiableList(batchResult);
-    }
-
-    /**
-     * 获取一个可以修改的子列表。这个子列表会将数据加载到内存中，提高访问效率。
-     * 注意：对返回的列表的修改不会影响原始列表。
-     *
-     * @param fromIndex 起始索引（包含）
-     * @param toIndex   结束索引（不包含）
-     * @return 包含指定范围元素的新ArrayList
-     */
-    public List<T> subListInMemory(int fromIndex, int toIndex) {
-        if (fromIndex < 0)
-            throw new IndexOutOfBoundsException("fromIndex = " + fromIndex);
-        if (toIndex > size())
-            throw new IndexOutOfBoundsException("toIndex = " + toIndex);
-        if (fromIndex > toIndex)
-            throw new IllegalArgumentException("fromIndex(" + fromIndex + ") > toIndex(" + toIndex + ")");
-
-        // 使用批量查询获取数据并返回一个新的ArrayList
-        return Collections.unmodifiableList(databaseOpt.batchQuery(fromIndex, toIndex));
     }
 
     public long pk(int index) {
