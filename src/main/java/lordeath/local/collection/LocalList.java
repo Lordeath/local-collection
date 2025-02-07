@@ -231,6 +231,12 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         return Collections.unmodifiableList(batchResult);
     }
 
+    /**
+     * 检索指定索引处的主键。
+     * 
+     * @param index 要检索的主键的索引
+     * @return 主键的长整型值
+     */
     public long pk(int index) {
         return databaseOpt.pk(index);
     }

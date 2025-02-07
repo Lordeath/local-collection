@@ -22,6 +22,12 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
     private final String keyColumn;
     private final LocalList<V> innerList;
 
+    /**
+     * 构造一个新的LocalMap实例。
+     * 
+     * 该构造函数初始化一个带有随机生成键列的新LocalMap实例。
+     * 它还创建一个新的LocalList实例来存储映射的值。
+     */
     public LocalMap() {
         this.keyColumn = "key_" + UUID.randomUUID().toString().replace("-", "");
         innerList = new LocalList<>();

@@ -533,6 +533,12 @@ public class DBUtil {
         throw new UnsupportedOperationException("不支持的数据类型，请联系开发: " + javaType);
     }
 
+    /**
+     * 根据给定的Java类型返回对应的SQL类型，如果未找到则返回null。
+     * 
+     * @param javaType 要检查的Java类型
+     * @return SQL类型的字符串，如果未找到则返回null
+     */
     public static String getSqlTypeOrNull(Class<?> javaType) {
         if (String.class.equals(javaType)) {
             return "VARCHAR";
@@ -654,17 +660,18 @@ public class DBUtil {
     }
 
     /**
-     * 通过key获取对象
+     * 根据给定的键向指定表中添加或更新对象。
+     * 
      * @param dataSource 数据源
      * @param tableName 表名
      * @param keyColumn key列名
-     * @param key key值
-     * @param value value值
+     * @param key 键值
+     * @param value 对象值
      * @param columns 列定义
      * @param clazz 类型
-     * @param <K> key类型
-     * @param <V> value类型
-     * @return value
+     * @param <K> 键类型
+     * @param <V> 对象类型
+     * @return 对象值
      */
     public static <K, V> V putByKey(DataSource dataSource, String tableName, String keyColumn, K key, V value, List<LocalColumn> columns, Class<V> clazz) {
 //        V v = getByKey(dataSource, tableName, keyColumn, key, columns, clazz);
@@ -678,13 +685,15 @@ public class DBUtil {
 
     /**
      * 添加数据
-     *
-     * @param <T>        数据类型
-     * @param obj        数据
-     * @param tableName  表名
-     * @param columns    列定义
+     * 
+     * @param <K> 键的类型
+     * @param <V> 对象的类型
+     * @param key 键值
+     * @param obj 对象值
+     * @param tableName 表名
+     * @param columns 列定义
      * @param dataSource 数据源
-     * @param keyColumn
+     * @param keyColumn 键列的名称
      * @return 是否添加成功
      */
     public static <K, V> boolean addByKey(K key, V obj, String tableName, List<LocalColumn> columns, DataSource dataSource, String keyColumn) {
