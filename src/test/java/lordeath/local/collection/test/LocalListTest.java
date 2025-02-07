@@ -9,6 +9,8 @@ import lordeath.local.collection.LocalList;
 import lordeath.local.collection.LocalMap;
 import org.apache.commons.lang3.reflect.FieldUtils;
 
+import java.util.Date;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
@@ -19,6 +21,15 @@ public class LocalListTest {
     }
 
     static void testList() {
+        try (LocalList<TestBean2> list = new LocalList<>()) {
+            list.add(new TestBean2("Jack", 26, new Date(10000000)));
+            list.add(new TestBean2("Rose", 27, new Date(20000000)));
+            assertEquals(2, list.size());
+            assertEquals(new Date(10000000), list.get(0).getBirthTime());
+            assertEquals(new Date(20000000), list.get(1).getBirthTime());
+        }
+
+
         try (LocalList<String> list = new LocalList<>()) {
             list.add("a");
             list.add("b");
@@ -183,5 +194,13 @@ public class LocalListTest {
     public static class TestBean1 {
         private String name;
         private int age;
+    }
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TestBean2 {
+        private String name;
+        private int age;
+        private Date birthTime;
     }
 }

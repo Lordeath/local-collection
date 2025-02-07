@@ -1,16 +1,11 @@
 package lordeath.local.collection.test;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lordeath.local.collection.LocalMap;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import static lordeath.local.collection.db.config.MainConfig.CONST_DB_ENGINE;
 import static lordeath.local.collection.test.LocalListTest.testCases;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class H2Test {
 

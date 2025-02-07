@@ -5,6 +5,7 @@ import org.apache.commons.lang3.reflect.FieldUtils;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -68,6 +69,10 @@ public class ColumnNameUtil {
             case "char":
             case "java.lang.Character":
                 return new LocalColumn(fieldName, Character.class, "CHAR", field);
+            case "date":
+            case "java.sql.Date":
+            case "java.util.Date":
+                return new LocalColumn(fieldName, Date.class, "DATETIME", field);
             default:
                 return null;
         }

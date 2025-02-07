@@ -184,15 +184,16 @@ public class DBUtil {
 
     /**
      * 批量查询数据
-     * @param fromIndex 起始索引(包含)
-     * @param toIndex 结束索引(不包含)
-     * @param tableName 表名
-     * @param columns 列定义
+     *
+     * @param fromIndex    起始索引(包含)
+     * @param toIndex      结束索引(不包含)
+     * @param tableName    表名
+     * @param columns      列定义
      * @param pkColumnName 主键列名
-     * @param dataSource 数据源
-     * @param clazz 数据类型
+     * @param dataSource   数据源
+     * @param clazz        数据类型
+     * @param <T>          数据类型
      * @return 数据
-     * @param <T> 数据类型
      */
     public static <T> List<T> batchQuery(int fromIndex, int toIndex, String tableName, List<LocalColumn> columns,
                                          String pkColumnName, DataSource dataSource, Class<T> clazz) {
@@ -232,8 +233,9 @@ public class DBUtil {
 
     /**
      * 执行sql
+     *
      * @param dataSource 数据源
-     * @param sql sql
+     * @param sql        sql
      * @return 执行结果
      */
     public static boolean executeSql(DataSource dataSource, String sql) {
@@ -248,12 +250,13 @@ public class DBUtil {
 
     /**
      * 查询单个数据
+     *
      * @param dataSource 数据源
-     * @param sql sql
-     * @param columns 列定义
-     * @param clazz 数据类型
+     * @param sql        sql
+     * @param columns    列定义
+     * @param clazz      数据类型
+     * @param <T>        数据类型
      * @return 数据
-     * @param <T> 数据类型
      */
     public static <T> T querySingle(DataSource dataSource, String sql, List<LocalColumn> columns, Class<T> clazz) {
         // 通过数据源进行查询，返回一个对象
@@ -277,6 +280,9 @@ public class DBUtil {
                         return (T) Boolean.valueOf(resultSet.getBoolean(columns.get(1).getColumnName()));
                     } else if (clazz == Character.class) {
                         return (T) Character.valueOf(resultSet.getString(columns.get(1).getColumnName()).charAt(0));
+                    } else if (clazz == Date.class) {
+                        Object dateInDb = resultSet.getObject(columns.get(1).getColumnName());
+                        return (T) convertObjectToDate(dateInDb);
                     } else {
                         throw new RuntimeException("不支持的类型: " + clazz);
                     }
@@ -300,6 +306,9 @@ public class DBUtil {
                         return (T) Boolean.valueOf(resultSet.getBoolean(columns.get(0).getColumnName()));
                     } else if (clazz == Character.class) {
                         return (T) Character.valueOf(resultSet.getString(columns.get(0).getColumnName()).charAt(0));
+                    } else if (clazz == Date.class) {
+                        Object dateInDb = resultSet.getObject(columns.get(0).getColumnName());
+                        return (T) convertObjectToDate(dateInDb);
                     } else {
                         throw new RuntimeException("不支持的类型: " + clazz);
                     }
@@ -326,6 +335,10 @@ public class DBUtil {
                             field.set(t, resultSet.getBoolean(column.getColumnName()));
                         } else if (column.getColumnType() == Character.class) {
                             field.set(t, resultSet.getString(column.getColumnName()).charAt(0));
+                        } else if (column.getColumnType() == Date.class) {
+                            Object dateInDb = resultSet.getObject(column.getColumnName());
+                            Date date = convertObjectToDate(dateInDb);
+                            field.set(t, date);
                         } else {
                             throw new RuntimeException("不支持的类型: " + column.getColumnType());
                         }
@@ -344,9 +357,22 @@ public class DBUtil {
         }
     }
 
+    private static Date convertObjectToDate(Object dateInDb) {
+        Date date = null;
+        if (dateInDb instanceof Integer) {
+            date = new Date(((Integer) dateInDb));
+        } else if (dateInDb instanceof Long) {
+            date = new Date(((Long) dateInDb));
+        }  else if (dateInDb instanceof Date) {
+            date = (Date) dateInDb;
+        }
+        return date;
+    }
+
     /**
      * 查询数据量
-     * @param tableName 表名
+     *
+     * @param tableName  表名
      * @param dataSource 数据源
      * @return 数据量
      */
@@ -359,7 +385,8 @@ public class DBUtil {
 
     /**
      * 删除表
-     * @param tableName 表名
+     *
+     * @param tableName  表名
      * @param dataSource 数据源
      */
     public static void extracted(String tableName, DataSource dataSource) {
@@ -371,7 +398,8 @@ public class DBUtil {
 
     /**
      * 清空表
-     * @param tableName 表名
+     *
+     * @param tableName  表名
      * @param dataSource 数据源
      */
     public static void clear(String tableName, DataSource dataSource) {
@@ -386,14 +414,15 @@ public class DBUtil {
 
     /**
      * 更新数据
-     * @param index 索引
-     * @param element 数据
-     * @param tableName 表名
-     * @param columns 列定义
+     *
+     * @param index        索引
+     * @param element      数据
+     * @param tableName    表名
+     * @param columns      列定义
      * @param pkColumnName 主键列名
-     * @param dataSource 数据源
+     * @param dataSource   数据源
+     * @param <T>          数据类型
      * @return 数据
-     * @param <T> 数据类型
      */
     public static <T> T set(int index, T element, String tableName, List<LocalColumn> columns, String pkColumnName, DataSource dataSource) {
         // 获取主键值
@@ -431,10 +460,11 @@ public class DBUtil {
 
     /**
      * 获取主键
-     * @param index 索引
-     * @param tableName 表名
+     *
+     * @param index        索引
+     * @param tableName    表名
      * @param pkColumnName 主键列名
-     * @param dataSource 数据源
+     * @param dataSource   数据源
      * @return 主键
      */
     public static long pk(int index, String tableName, String pkColumnName, DataSource dataSource) {
@@ -451,7 +481,8 @@ public class DBUtil {
 
     /**
      * setParameters
-     * @param stmt PreparedStatement
+     *
+     * @param stmt   PreparedStatement
      * @param params 参数
      * @throws SQLException 异常
      */
@@ -481,9 +512,10 @@ public class DBUtil {
 
     /**
      * 创建分组表
-     * @param dataSource 数据源
-     * @param tableName 表名
-     * @param keyColumn key列名
+     *
+     * @param dataSource    数据源
+     * @param tableName     表名
+     * @param keyColumn     key列名
      * @param resultColumns 结果列
      * @return 是否创建成功
      */
@@ -532,6 +564,7 @@ public class DBUtil {
 
     /**
      * 获取SQL类型
+     *
      * @param javaType Java类型
      * @return SQL类型
      */
@@ -545,7 +578,7 @@ public class DBUtil {
 
     /**
      * 根据给定的Java类型返回对应的SQL类型，如果未找到则返回null。
-     * 
+     *
      * @param javaType 要检查的Java类型
      * @return SQL类型的字符串，如果未找到则返回null
      */
@@ -570,11 +603,12 @@ public class DBUtil {
 
     /**
      * 插入分组数据
-     * @param dataSource 数据源
-     * @param sourceTableName 源表名
-     * @param targetTableName 目标表名
-     * @param groupByColumns 分组列
-     * @param whereClause where条件
+     *
+     * @param dataSource       数据源
+     * @param sourceTableName  源表名
+     * @param targetTableName  目标表名
+     * @param groupByColumns   分组列
+     * @param whereClause      where条件
      * @param columnForMapList 列映射
      * @return 是否插入成功
      */
@@ -599,7 +633,7 @@ public class DBUtil {
         }
         insertSql.setLength(insertSql.length() - 2);
         insertSql.append(" FROM ").append(sourceTableName);
-        
+
         List<Object> params = new ArrayList<>();
         StringBuilder whereBuilder = new StringBuilder();
         if (whereClause != null && !whereClause.isEmpty()) {
@@ -625,12 +659,12 @@ public class DBUtil {
 
         try (Connection connection = dataSource.getConnection();
              PreparedStatement stmt = connection.prepareStatement(insertSql.toString())) {
-            
+
             // 设置where子句中的参数
             for (int i = 0; i < params.size(); i++) {
                 stmt.setObject(i + 1, params.get(i));
             }
-            
+
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
             throw new RuntimeException("Failed to insert grouped data", e);
@@ -639,13 +673,14 @@ public class DBUtil {
 
     /**
      * 获取对象
+     *
      * @param dataSource 数据源
-     * @param tableName 表名
-     * @param keyColumn key列名
-     * @param keyValue key值
-     * @param columns 列定义
-     * @param clazz 类型
-     * @param <T> 类型
+     * @param tableName  表名
+     * @param keyColumn  key列名
+     * @param keyValue   key值
+     * @param columns    列定义
+     * @param clazz      类型
+     * @param <T>        类型
      * @return 对象
      */
     public static <T> T getByKey(DataSource dataSource, String tableName, String keyColumn,
@@ -671,23 +706,23 @@ public class DBUtil {
 
     /**
      * 根据给定的键向指定表中添加或更新对象。
-     * 
+     *
      * @param dataSource 数据源
-     * @param tableName 表名
-     * @param keyColumn key列名
-     * @param key 键值
-     * @param value 对象值
-     * @param columns 列定义
-     * @param clazz 类型
-     * @param <K> 键类型
-     * @param <V> 对象类型
+     * @param tableName  表名
+     * @param keyColumn  key列名
+     * @param key        键值
+     * @param value      对象值
+     * @param columns    列定义
+     * @param clazz      类型
+     * @param <K>        键类型
+     * @param <V>        对象类型
      * @return 对象值
      */
     public static <K, V> V putByKey(DataSource dataSource, String tableName, String keyColumn, K key, V value, List<LocalColumn> columns, Class<V> clazz) {
 //        V v = getByKey(dataSource, tableName, keyColumn, key, columns, clazz);
 //        if (v != null) {
-            // update
-            removeByKey(dataSource, tableName, keyColumn, key);
+        // update
+        removeByKey(dataSource, tableName, keyColumn, key);
 //        }
         addByKey(key, value, tableName, columns, dataSource, keyColumn);
         return value;
@@ -695,15 +730,15 @@ public class DBUtil {
 
     /**
      * 添加数据
-     * 
-     * @param <K> 键的类型
-     * @param <V> 对象的类型
-     * @param key 键值
-     * @param obj 对象值
-     * @param tableName 表名
-     * @param columns 列定义
+     *
+     * @param <K>        键的类型
+     * @param <V>        对象的类型
+     * @param key        键值
+     * @param obj        对象值
+     * @param tableName  表名
+     * @param columns    列定义
      * @param dataSource 数据源
-     * @param keyColumn 键列的名称
+     * @param keyColumn  键列的名称
      * @return 是否添加成功
      */
     public static <K, V> boolean addByKey(K key, V obj, String tableName, List<LocalColumn> columns, DataSource dataSource, String keyColumn) {
@@ -750,10 +785,11 @@ public class DBUtil {
 
     /**
      * 通过key删除对象
+     *
      * @param dataSource 数据源
-     * @param tableName 表名
-     * @param keyColumn key列名
-     * @param keyValue key值
+     * @param tableName  表名
+     * @param keyColumn  key列名
+     * @param keyValue   key值
      * @return 是否删除成功
      */
     public static boolean removeByKey(DataSource dataSource, String tableName, String keyColumn, Object keyValue) {
@@ -772,9 +808,10 @@ public class DBUtil {
 
     /**
      * 获取所有key
+     *
      * @param dataSource 数据源
-     * @param tableName 表名
-     * @param keyColumn key列名
+     * @param tableName  表名
+     * @param keyColumn  key列名
      * @return key列表
      */
     public static List<String> getAllKeys(DataSource dataSource, String tableName, String keyColumn) {
