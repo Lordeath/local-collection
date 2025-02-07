@@ -1,12 +1,10 @@
 package lordeath.local.collection.db.opt.factory;
 
+import lombok.extern.slf4j.Slf4j;
 import lordeath.local.collection.db.bean.LocalColumnForMap;
-import lordeath.local.collection.db.opt.impl.DerbyOpt;
 import lordeath.local.collection.db.opt.impl.H2Opt;
-import lordeath.local.collection.db.opt.impl.HSQLDBOpt;
 import lordeath.local.collection.db.opt.impl.SqliteOpt;
 import lordeath.local.collection.db.opt.inter.IDatabaseOpt;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
@@ -35,10 +33,6 @@ public class DatabaseFactory {
             databaseOpt = new H2Opt<>(clazz, tableName, columnsForMap);
         } else if ("sqlite".equalsIgnoreCase(dbEngine)) {
             databaseOpt = new SqliteOpt<>(clazz, tableName, columnsForMap);
-        } else if ("hsqldb".equalsIgnoreCase(dbEngine)) {
-            databaseOpt = new HSQLDBOpt<>(clazz, tableName, columnsForMap);
-        } else if ("derby".equalsIgnoreCase(dbEngine)) {
-            databaseOpt = new DerbyOpt<>(clazz, tableName, columnsForMap);
         } else {
             throw new IllegalArgumentException("其他的数据库暂时不支持: " + dbEngine);
         }

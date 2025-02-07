@@ -5,9 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import lordeath.local.collection.db.bean.LocalColumn;
 import lordeath.local.collection.db.bean.LocalColumnForMap;
 import lordeath.local.collection.db.opt.factory.DatabaseFactory;
-import lordeath.local.collection.db.opt.impl.DerbyOpt;
 import lordeath.local.collection.db.opt.impl.H2Opt;
-import lordeath.local.collection.db.opt.impl.HSQLDBOpt;
 import lordeath.local.collection.db.opt.impl.SqliteOpt;
 import lordeath.local.collection.db.opt.inter.IDatabaseOpt;
 
@@ -48,15 +46,11 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     void init(Class<T> clazz) {
         String dbEngine = System.getProperty(CONST_DB_ENGINE);
-        if ("h2".equalsIgnoreCase(dbEngine)) {
-            databaseOpt = new H2Opt<>(clazz);
-        } else if (dbEngine == null || "sqlite".equalsIgnoreCase(dbEngine)) {
+        if (dbEngine == null || "sqlite".equalsIgnoreCase(dbEngine)) {
             // 默认的改成sqlite，因为sqlite的内存降低是最明显的
             databaseOpt = new SqliteOpt<>(clazz);
-        } else if ("hsqldb".equalsIgnoreCase(dbEngine)) {
-            databaseOpt = new HSQLDBOpt<>(clazz);
-        } else if ("derby".equalsIgnoreCase(dbEngine)) {
-            databaseOpt = new DerbyOpt<>(clazz);
+        } else if ("h2".equalsIgnoreCase(dbEngine)) {
+            databaseOpt = new H2Opt<>(clazz);
         } else {
             throw new IllegalArgumentException("其他的数据库暂时不支持: " + dbEngine);
         }
