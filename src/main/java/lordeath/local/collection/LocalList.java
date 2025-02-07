@@ -27,6 +27,8 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     IDatabaseOpt<T> databaseOpt;
     List<LocalColumn> columns;
     private final AtomicBoolean removeFlag = new AtomicBoolean(false);
+    // 使用缓存来提升循环速度
+    private final AtomicInteger sizeCounter = new AtomicInteger(0);
 
     /**
      * 创建一个空的LocalList
@@ -37,6 +39,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
 
     /**
      * 使用指定的列定义创建LocalList
+     *
      * @param clazz 元素类型
      */
     public LocalList(Class<T> clazz) {
@@ -45,6 +48,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
 
     /**
      * 使用指定的列定义创建LocalList
+     *
      * @param clazz 元素类型
      */
     void init(Class<T> clazz) {
@@ -61,13 +65,14 @@ public class LocalList<T> implements AutoCloseable, List<T> {
 
     /**
      * 使用指定的列定义创建LocalList
-     * @param clazz 元素类型
-     * @param tableName 表名
+     *
+     * @param clazz         元素类型
+     * @param tableName     表名
      * @param columnsForMap 列映射定义
      */
     public LocalList(Class<T> clazz, String tableName, List<LocalColumnForMap> columnsForMap) {
         this.columns = columnsForMap.stream().map(LocalColumnForMap::getSinkColumn).collect(Collectors.toList());
-        
+
         // 创建数据库操作对象
         this.databaseOpt = DatabaseFactory.createDatabaseOpt(clazz, tableName, columnsForMap);
     }
@@ -80,7 +85,8 @@ public class LocalList<T> implements AutoCloseable, List<T> {
 
     @Override
     public int size() {
-        return Optional.ofNullable(databaseOpt).map(IDatabaseOpt::size).orElse(0);
+//        return Optional.ofNullable(databaseOpt).map(IDatabaseOpt::size).orElse(0);
+        return sizeCounter.get();
     }
 
     @Override
@@ -117,7 +123,11 @@ public class LocalList<T> implements AutoCloseable, List<T> {
             //noinspection unchecked
             init((Class<T>) t.getClass());
         }
-        return databaseOpt.add(t);
+        boolean b = databaseOpt.add(t);
+        if (b) {
+            sizeCounter.incrementAndGet();
+        }
+        return b;
     }
 
     @Override
@@ -141,7 +151,11 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         if (databaseOpt == null) {
             throw new RuntimeException("数据源操作初始化失败");
         }
-        return databaseOpt.addAll(c);
+        boolean b = databaseOpt.addAll(c);
+        if (b) {
+            sizeCounter.addAndGet(c.size());
+        }
+        return b;
     }
 
     @SuppressWarnings("NullableProblems")
@@ -165,6 +179,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     @Override
     public void clear() {
         databaseOpt.clear();
+        sizeCounter.set(0);
     }
 
     @Override
@@ -185,7 +200,11 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     @Override
     public T remove(int index) {
         removeFlag.set(true);
-        return databaseOpt.remove(index);
+        T t = databaseOpt.remove(index);
+        if (t != null) {
+            sizeCounter.decrementAndGet();
+        }
+        return t;
     }
 
     @Override
@@ -237,7 +256,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
 
     /**
      * 检索指定索引处的主键。
-     * 
+     *
      * @param index 要检索的主键的索引
      * @return 主键的长整型值
      */
