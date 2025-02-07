@@ -115,14 +115,14 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
             this.innerList.databaseOpt = innerList.databaseOpt;
             this.innerList.columns = innerList.columns;
         }
-        return innerList.getDatabaseOpt().putByKey(keyColumn, key + "", value);
+        return innerList.putByKey(keyColumn, key + "", value);
     }
 
     @Override
     public V remove(Object key) {
         V value = get(key);
         if (value != null) {
-            innerList.getDatabaseOpt().removeByKey(keyColumn, key);
+            innerList.removeByKey(keyColumn, key);
         }
         return value;
     }
@@ -266,7 +266,7 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
             LocalList<V> innerList = new LocalList<>((Class<V>) resultClass, newTableName, columnForMapList);
 
             // 给这个innerList灌入数据，insert into sink_table (...) select ... from source_table where ... group by ...
-            innerList.getDatabaseOpt().insertGroupedData(source.getDatabaseOpt().getTableName()
+            innerList.insertGroupedData(source.getDatabaseOpt().getTableName()
                     , newTableName, groupByColumns, whereClause, columnForMapList);
 
             // 创建新的LocalMap实例

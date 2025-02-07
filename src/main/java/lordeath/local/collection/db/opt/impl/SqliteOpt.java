@@ -15,6 +15,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
@@ -251,14 +252,16 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     /**
      * 根据主键设置元素
+     *
      * @param keyColumn 主键列
-     * @param key 主键值
-     * @param value 元素
+     * @param key       主键值
+     * @param value     元素
+     * @param removed   是否被移除，值在方法里面更新
      * @return 原元素
      */
     @Override
-    public T putByKey(String keyColumn, String key, T value) {
-        return DBUtil.putByKey(dataSource, tableName, keyColumn, key, value, columns, clazz);
+    public T putByKey(String keyColumn, String key, T value, AtomicBoolean removed) {
+        return DBUtil.putByKey(dataSource, tableName, keyColumn, key, value, columns, removed);
     }
 
     /**

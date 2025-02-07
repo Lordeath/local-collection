@@ -267,6 +267,29 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         return databaseOpt.pk(index);
     }
 
+    public T putByKey(String keyColumn, String key, T value) {
+        AtomicBoolean removed = new AtomicBoolean(false);
+        T t = databaseOpt.putByKey(keyColumn, key, value, removed);
+        if (!removed.get()) {
+            // 新加的元素，计数+1
+            sizeCounter.incrementAndGet();
+        }
+        return t;
+    }
+
+    public void removeByKey(String keyColumn, Object key) {
+        boolean b = databaseOpt.removeByKey(keyColumn, key);
+        if (b) {
+            sizeCounter.decrementAndGet();
+        }
+    }
+
+    public void insertGroupedData(String tableName, String newTableName, List<String> groupByColumns, String whereClause, List<LocalColumnForMap> columnForMapList) {
+        databaseOpt.insertGroupedData(tableName, newTableName, groupByColumns, whereClause, columnForMapList);
+        // 刷新计数器
+        sizeCounter.set(databaseOpt.size());
+    }
+
     private class LocalListIterator implements ListIterator<T> {
         private int cursor;
         private int lastRet = -1;

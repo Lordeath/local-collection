@@ -5,6 +5,7 @@ import lordeath.local.collection.db.bean.LocalColumnForMap;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 数据库操作接口
@@ -121,12 +122,14 @@ public interface IDatabaseOpt<T> {
 
     /**
      * 根据key存储对象
+     *
      * @param keyColumn key列名
-     * @param key key值
-     * @param value 要存储的对象
+     * @param key       key值
+     * @param value     要存储的对象
+     * @param removed
      * @return 原对象（如果存在）
      */
-    T putByKey(String keyColumn, String key, T value);
+    T putByKey(String keyColumn, String key, T value, AtomicBoolean removed);
 
     /**
      * 根据key删除对象

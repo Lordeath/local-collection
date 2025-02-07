@@ -15,11 +15,13 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
  * H2数据库操作实现类
  * 通过操作H2数据库来实现对数据的操作，注意，这个类是线程不安全的
+ *
  * @param <T> 数据类型
  */
 @Slf4j
@@ -49,6 +51,7 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     /**
      * 使用指定的元素类型构造数据库操作对象
+     *
      * @param clazz 元素类型
      */
     public H2Opt(Class<T> clazz) {
@@ -76,8 +79,9 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     /**
      * 使用指定的元素类型、表名和列映射构造数据库操作对象
-     * @param clazz 元素类型
-     * @param tableName 表名
+     *
+     * @param clazz         元素类型
+     * @param tableName     表名
      * @param columnsForMap 列映射定义
      */
     public H2Opt(Class<T> clazz, String tableName, List<LocalColumnForMap> columnsForMap) {
@@ -113,6 +117,7 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     /**
      * 添加元素到数据库
+     *
      * @param obj 元素
      * @return 添加成功与否
      */
@@ -123,6 +128,7 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     /**
      * 批量添加元素到数据库
+     *
      * @param c 元素集合
      * @return 添加成功与否
      */
@@ -133,6 +139,7 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     /**
      * 移除指定索引的元素
+     *
      * @param index 索引
      * @return 移除的元素
      */
@@ -159,6 +166,7 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     /**
      * 获取数据库大小
+     *
      * @return 大小
      */
     @Override
@@ -180,7 +188,8 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     /**
      * 设置指定索引的元素
-     * @param index 索引
+     *
+     * @param index   索引
      * @param element 元素
      * @return 原元素
      */
@@ -191,6 +200,7 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     /**
      * 获取指定索引的主键值
+     *
      * @param index 索引
      * @return 主键值
      */
@@ -201,8 +211,9 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     /**
      * 批量查询元素
+     *
      * @param fromIndex 开始索引
-     * @param toIndex 结束索引
+     * @param toIndex   结束索引
      * @return 元素集合
      */
     @Override
@@ -212,11 +223,12 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     /**
      * 创建分组表
-     * @param newTableName 新表名
+     *
+     * @param newTableName   新表名
      * @param groupByColumns 分组列
-     * @param whereClause 条件
-     * @param keyColumn 主键列
-     * @param resultColumns 结果列
+     * @param whereClause    条件
+     * @param keyColumn      主键列
+     * @param resultColumns  结果列
      * @return 创建成功与否
      */
     @Override
@@ -226,10 +238,11 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     /**
      * 插入分组数据
-     * @param sourceTableName 源表名
-     * @param targetTableName 目标表名
-     * @param groupByColumns 分组列
-     * @param whereClause 条件
+     *
+     * @param sourceTableName  源表名
+     * @param targetTableName  目标表名
+     * @param groupByColumns   分组列
+     * @param whereClause      条件
      * @param columnForMapList 列映射定义
      * @return 插入成功与否
      */
@@ -241,8 +254,9 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     /**
      * 根据主键获取元素
+     *
      * @param keyColumn 主键列
-     * @param keyValue 主键值
+     * @param keyValue  主键值
      * @return 元素
      */
     @Override
@@ -252,20 +266,23 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     /**
      * 根据主键设置元素
+     *
      * @param keyColumn 主键列
-     * @param key 主键值
-     * @param value 元素
+     * @param key       主键值
+     * @param value     元素
+     * @param removed   是否被移除，值在方法里面更新
      * @return 原元素
      */
     @Override
-    public T putByKey(String keyColumn, String key, T value) {
-        return DBUtil.putByKey(dataSource, tableName, keyColumn, key, value, columns, clazz);
+    public T putByKey(String keyColumn, String key, T value, AtomicBoolean removed) {
+        return DBUtil.putByKey(dataSource, tableName, keyColumn, key, value, columns, removed);
     }
 
     /**
      * 根据主键移除元素
+     *
      * @param keyColumn 主键列
-     * @param keyValue 主键值
+     * @param keyValue  主键值
      * @return 移除成功与否
      */
     @Override
@@ -275,6 +292,7 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
 
     /**
      * 获取所有主键值
+     *
      * @param keyColumn 主键列
      * @return 主键值集合
      */

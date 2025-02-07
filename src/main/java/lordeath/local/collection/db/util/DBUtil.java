@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.sql.*;
 import java.util.Date;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 数据库工具类
@@ -714,23 +715,21 @@ public class DBUtil {
     /**
      * 根据给定的键向指定表中添加或更新对象。
      *
+     * @param <K>        键类型
+     * @param <V>        对象类型
      * @param dataSource 数据源
      * @param tableName  表名
      * @param keyColumn  key列名
      * @param key        键值
      * @param value      对象值
      * @param columns    列定义
-     * @param clazz      类型
-     * @param <K>        键类型
-     * @param <V>        对象类型
+     * @param removed    是否被移除，值在方法里面更新
      * @return 对象值
      */
-    public static <K, V> V putByKey(DataSource dataSource, String tableName, String keyColumn, K key, V value, List<LocalColumn> columns, Class<V> clazz) {
-//        V v = getByKey(dataSource, tableName, keyColumn, key, columns, clazz);
-//        if (v != null) {
+    public static <K, V> V putByKey(DataSource dataSource, String tableName, String keyColumn, K key, V value, List<LocalColumn> columns, AtomicBoolean removed) {
         // update
-        removeByKey(dataSource, tableName, keyColumn, key);
-//        }
+        boolean removedBoolean = removeByKey(dataSource, tableName, keyColumn, key);
+        removed.set(removedBoolean);
         addByKey(key, value, tableName, columns, dataSource, keyColumn);
         return value;
     }
