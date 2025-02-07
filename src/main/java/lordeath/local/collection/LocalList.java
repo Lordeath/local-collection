@@ -8,7 +8,9 @@ import lordeath.local.collection.db.opt.factory.DatabaseFactory;
 import lordeath.local.collection.db.opt.impl.H2Opt;
 import lordeath.local.collection.db.opt.impl.SqliteOpt;
 import lordeath.local.collection.db.opt.inter.IDatabaseOpt;
+import lordeath.local.collection.db.util.DBUtil;
 
+import javax.sql.DataSource;
 import java.lang.ref.Cleaner;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -32,14 +34,13 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     private final AtomicInteger sizeCounter = new AtomicInteger(0);
 
     private static final Cleaner cleaner = Cleaner.create();
-    private final Cleaner.Cleanable cleanable;
+    private Cleaner.Cleanable cleanable;
 
     /**
      * 创建一个空的LocalList
      */
     public LocalList() {
         databaseOpt = null;
-        cleanable = cleaner.register(this, this::close);
     }
 
     /**
@@ -49,7 +50,6 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     public LocalList(Class<T> clazz) {
         init(clazz);
-        cleanable = cleaner.register(this, this::close);
     }
 
     /**
@@ -67,6 +67,10 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         } else {
             throw new IllegalArgumentException("其他的数据库暂时不支持: " + dbEngine);
         }
+
+        String tableName = databaseOpt.getTableName();
+        DataSource dataSource = databaseOpt.getDataSource();
+        cleanable = cleaner.register(this, () -> DBUtil.drop(tableName, dataSource));
     }
 
     /**
@@ -81,7 +85,8 @@ public class LocalList<T> implements AutoCloseable, List<T> {
 
         // 创建数据库操作对象
         this.databaseOpt = DatabaseFactory.createDatabaseOpt(clazz, tableName, columnsForMap);
-        this.cleanable = cleaner.register(this, this::close);
+        DataSource dataSource = databaseOpt.getDataSource();
+        cleanable = cleaner.register(this, () -> DBUtil.drop(tableName, dataSource));
     }
 
 
@@ -89,7 +94,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     public void close() {
         try {
             Optional.ofNullable(databaseOpt).ifPresent(IDatabaseOpt::close);
-        } catch (Throwable e) {
+        } catch (Throwable ignored) {
         }
     }
 

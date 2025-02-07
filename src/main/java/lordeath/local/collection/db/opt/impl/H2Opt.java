@@ -30,6 +30,7 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
     /**
      * 数据源
      */
+    @Getter
     private final DataSource dataSource;
     /**
      * 操作的表名

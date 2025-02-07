@@ -3,6 +3,7 @@ package lordeath.local.collection.db.opt.inter;
 import lordeath.local.collection.db.bean.LocalColumn;
 import lordeath.local.collection.db.bean.LocalColumnForMap;
 
+import javax.sql.DataSource;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -12,6 +13,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @param <T> 数据类型
  */
 public interface IDatabaseOpt<T> {
+
+    DataSource getDataSource();
+
     /**
      * 添加一个对象
      * @param obj 要添加的对象
