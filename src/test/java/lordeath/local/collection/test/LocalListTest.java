@@ -9,6 +9,7 @@ import lordeath.local.collection.LocalList;
 import lordeath.local.collection.LocalMap;
 import org.apache.commons.lang3.reflect.FieldUtils;
 
+import java.math.BigDecimal;
 import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -22,11 +23,15 @@ public class LocalListTest {
 
     static void testList() {
         try (LocalList<TestBean2> list = new LocalList<>()) {
-            list.add(new TestBean2("Jack", 26, new Date(10000000)));
-            list.add(new TestBean2("Rose", 27, new Date(20000000)));
-            assertEquals(2, list.size());
+            list.add(new TestBean2("Jack", 26, new Date(10000000), new BigDecimal("123.456789")));
+            list.add(new TestBean2("Rose", 27, new Date(20000000), new BigDecimal("789.654321")));
+            list.add(new TestBean2("Max", 28, new Date(30000000), new BigDecimal("123456789.123456789")));
+            assertEquals(3, list.size());
             assertEquals(new Date(10000000), list.get(0).getBirthTime());
+            assertEquals(new BigDecimal("123.456789"), list.get(0).getMoney());
             assertEquals(new Date(20000000), list.get(1).getBirthTime());
+            assertEquals(new BigDecimal("789.654321"), list.get(1).getMoney());
+            assertEquals(new BigDecimal("123456789.123456789"), list.get(2).getMoney());
         }
 
 
@@ -202,5 +207,6 @@ public class LocalListTest {
         private String name;
         private int age;
         private Date birthTime;
+        private BigDecimal money;
     }
 }

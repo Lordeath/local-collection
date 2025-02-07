@@ -4,6 +4,7 @@ import lordeath.local.collection.db.bean.LocalColumn;
 import org.apache.commons.lang3.reflect.FieldUtils;
 
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -40,9 +41,10 @@ public class ColumnNameUtil {
 
     /**
      * 获取字段
-     * @param clazz 类
+     *
+     * @param clazz     类
      * @param fieldName 字段名称
-     * @param field 字段
+     * @param field     字段
      * @return 字段
      */
     private static LocalColumn getLocalColumns(Class<?> clazz, String fieldName, Field field) {
@@ -73,6 +75,9 @@ public class ColumnNameUtil {
             case "java.sql.Date":
             case "java.util.Date":
                 return new LocalColumn(fieldName, Date.class, "DATETIME", field);
+            case "java.math.BigDecimal":
+//                return new LocalColumn(fieldName, BigDecimal.class, "decimal(32,8)", field);
+                return new LocalColumn(fieldName, BigDecimal.class, "VARCHAR", field);
             default:
                 return null;
         }

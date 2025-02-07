@@ -8,6 +8,7 @@ import lordeath.local.collection.db.bean.LocalColumnForMap;
 import javax.sql.DataSource;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.math.BigDecimal;
 import java.sql.*;
 import java.util.Date;
 import java.util.*;
@@ -283,6 +284,8 @@ public class DBUtil {
                     } else if (clazz == Date.class) {
                         Object dateInDb = resultSet.getObject(columns.get(1).getColumnName());
                         return (T) convertObjectToDate(dateInDb);
+                    } else if (clazz == BigDecimal.class) {
+                        return (T) resultSet.getBigDecimal(columns.get(1).getColumnName());
                     } else {
                         throw new RuntimeException("不支持的类型: " + clazz);
                     }
@@ -309,6 +312,8 @@ public class DBUtil {
                     } else if (clazz == Date.class) {
                         Object dateInDb = resultSet.getObject(columns.get(0).getColumnName());
                         return (T) convertObjectToDate(dateInDb);
+                    } else if (clazz == BigDecimal.class) {
+                        return (T) resultSet.getBigDecimal(columns.get(0).getColumnName());
                     } else {
                         throw new RuntimeException("不支持的类型: " + clazz);
                     }
@@ -339,6 +344,8 @@ public class DBUtil {
                             Object dateInDb = resultSet.getObject(column.getColumnName());
                             Date date = convertObjectToDate(dateInDb);
                             field.set(t, date);
+                        } else if (column.getColumnType() == BigDecimal.class) {
+                            field.set(t, resultSet.getBigDecimal(column.getColumnName()));
                         } else {
                             throw new RuntimeException("不支持的类型: " + column.getColumnType());
                         }
@@ -363,7 +370,7 @@ public class DBUtil {
             date = new Date(((Integer) dateInDb));
         } else if (dateInDb instanceof Long) {
             date = new Date(((Long) dateInDb));
-        }  else if (dateInDb instanceof Date) {
+        } else if (dateInDb instanceof Date) {
             date = (Date) dateInDb;
         }
         return date;
