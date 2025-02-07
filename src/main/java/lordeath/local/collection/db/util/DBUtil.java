@@ -163,7 +163,11 @@ public class DBUtil {
         // 通过主键进行排序，然后查询，limit offset 1
         // 拼接sql
         StringBuilder sql = new StringBuilder("select * from ")
-                .append(tableName).append(" order by ").append(pkColumnName).append(" limit 1 offset ").append(index);
+                .append(tableName);
+        if (pkColumnName != null) {
+            sql.append(" order by ").append(pkColumnName);
+        }
+        sql.append(" limit 1 offset ").append(index);
         log.debug("查询数据的sql: {}", sql);
         return DBUtil.querySingle(dataSource, sql.toString(), columns, clazz);
     }
@@ -246,6 +250,29 @@ public class DBUtil {
         try (Connection connection = dataSource.getConnection();
              Statement statement = connection.createStatement()) {
             ResultSet resultSet = statement.executeQuery(sql);
+            if (columns.size() == 2 && columns.get(1).getField() == null && columns.get(0).getColumnName().startsWith("key_")) {
+                // map来获取列时，直接使用列的名称即可
+                if (resultSet.next()) {
+                    if (clazz == String.class) {
+                        return (T) resultSet.getString(columns.get(1).getColumnName());
+                    } else if (clazz == Integer.class) {
+                        return (T) Integer.valueOf(resultSet.getInt(columns.get(1).getColumnName()));
+                    } else if (clazz == Long.class) {
+                        return (T) Long.valueOf(resultSet.getLong(columns.get(1).getColumnName()));
+                    } else if (clazz == Double.class) {
+                        return (T) Double.valueOf(resultSet.getDouble(columns.get(1).getColumnName()));
+                    } else if (clazz == Float.class) {
+                        return (T) Float.valueOf(resultSet.getFloat(columns.get(1).getColumnName()));
+                    } else if (clazz == Boolean.class) {
+                        return (T) Boolean.valueOf(resultSet.getBoolean(columns.get(1).getColumnName()));
+                    } else if (clazz == Character.class) {
+                        return (T) Character.valueOf(resultSet.getString(columns.get(1).getColumnName()).charAt(0));
+                    } else {
+                        throw new RuntimeException("不支持的类型: " + clazz);
+                    }
+                }
+                return null;
+            }
             if (columns.size() == 1 && columns.get(0).getField() == null) {
                 // 说明是简单数据，直接返回
                 if (resultSet.next()) {
@@ -426,6 +453,9 @@ public class DBUtil {
 
     private static <T> T createInstance(ResultSet rs, List<LocalColumn> columns, Class<T> clazz)
             throws Exception {
+        if (columns.size() == 2 && columns.get(1).getField() == null && columns.get(0).getColumnName().startsWith("key_")) {
+            return (T) rs.getObject(columns.get(1).getColumnName());
+        }
         T obj = clazz.getDeclaredConstructor().newInstance();
         for (LocalColumn column : columns) {
             if (column.getField() != null) {
@@ -496,6 +526,14 @@ public class DBUtil {
      * @return SQL类型
      */
     public static String getSqlType(Class<?> javaType) {
+        String VARCHAR = getSqlTypeOrNull(javaType);
+        if (VARCHAR != null) {
+            return VARCHAR;
+        }
+        throw new UnsupportedOperationException("不支持的数据类型，请联系开发: " + javaType);
+    }
+
+    public static String getSqlTypeOrNull(Class<?> javaType) {
         if (String.class.equals(javaType)) {
             return "VARCHAR";
         } else if (Integer.class.equals(javaType) || int.class.equals(javaType)) {
@@ -511,7 +549,7 @@ public class DBUtil {
         } else if (Date.class.equals(javaType)) {
             return "TIMESTAMP";
         }
-        throw new UnsupportedOperationException("不支持的数据类型，请联系开发: " + javaType);
+        return null;
     }
 
     /**
@@ -629,14 +667,67 @@ public class DBUtil {
      * @return value
      */
     public static <K, V> V putByKey(DataSource dataSource, String tableName, String keyColumn, K key, V value, List<LocalColumn> columns, Class<V> clazz) {
-        V v = getByKey(dataSource, tableName, keyColumn, key, columns, clazz);
-        if (v != null) {
+//        V v = getByKey(dataSource, tableName, keyColumn, key, columns, clazz);
+//        if (v != null) {
             // update
             removeByKey(dataSource, tableName, keyColumn, key);
-        }
-        add(value, tableName, columns, dataSource);
+//        }
+        addByKey(key, value, tableName, columns, dataSource, keyColumn);
         return value;
     }
+
+    /**
+     * 添加数据
+     *
+     * @param <T>        数据类型
+     * @param obj        数据
+     * @param tableName  表名
+     * @param columns    列定义
+     * @param dataSource 数据源
+     * @param keyColumn
+     * @return 是否添加成功
+     */
+    public static <K, V> boolean addByKey(K key, V obj, String tableName, List<LocalColumn> columns, DataSource dataSource, String keyColumn) {
+        StringBuilder sql = new StringBuilder("INSERT INTO ").append(tableName).append(" (");
+        for (LocalColumn column : columns) {
+            sql.append(column.getColumnName()).append(", ");
+        }
+        sql.setLength(sql.length() - 2);
+        sql.append(") VALUES (");
+        for (int i = 0; i < columns.size(); i++) {
+            sql.append("?, ");
+        }
+        sql.setLength(sql.length() - 2);
+        sql.append(")");
+        log.debug("插入数据的sql: {}", sql);
+
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql.toString())) {
+            int parameterIndex = 1;
+            for (LocalColumn column : columns) {
+                if (column.getField() == null && columns.size() == 1) {
+                    // 特殊情况：如果只有一个列且field为null，直接使用对象本身作为值
+                    stmt.setObject(parameterIndex++, obj);
+                } else if (column.getField() == null && columns.size() == 2 && !keyColumn.equals(column.getColumnName())) {
+                    // 特殊情况：如果只有2个列且field为null，直接使用对象本身作为值
+                    stmt.setObject(parameterIndex++, obj);
+                } else {
+                    if (keyColumn.equals(column.getColumnName())) {
+                        stmt.setObject(parameterIndex++, key);
+                    } else {
+                        Field field = column.getField();
+                        field.setAccessible(true);
+                        Object value = field.get(obj);
+                        stmt.setObject(parameterIndex++, value);
+                    }
+                }
+            }
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
     /**
      * 通过key删除对象

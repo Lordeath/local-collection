@@ -20,14 +20,12 @@ import static lordeath.local.collection.db.config.MainConfig.CONST_DB_ENGINE;
  * 参考的是ArrayList，但是实现方式是H2数据库或者其他数据库
  * 注意，这个类是线程不安全的
  */
+@Getter
 @Slf4j
 public class LocalList<T> implements AutoCloseable, List<T> {
 
-    @Getter
-    private IDatabaseOpt<T> databaseOpt;
-    private Class<T> clazz;
-    @Getter
-    private List<LocalColumn> columns;
+    IDatabaseOpt<T> databaseOpt;
+    List<LocalColumn> columns;
 
     /**
      * 创建一个空的LocalList
@@ -48,7 +46,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * 使用指定的列定义创建LocalList
      * @param clazz 元素类型
      */
-    private void init(Class<T> clazz) {
+    void init(Class<T> clazz) {
         String dbEngine = System.getProperty(CONST_DB_ENGINE);
         if ("h2".equalsIgnoreCase(dbEngine)) {
             databaseOpt = new H2Opt<>(clazz);
@@ -71,7 +69,6 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * @param columnsForMap 列映射定义
      */
     public LocalList(Class<T> clazz, String tableName, List<LocalColumnForMap> columnsForMap) {
-        this.clazz = clazz;
         this.columns = columnsForMap.stream().map(LocalColumnForMap::getSinkColumn).collect(Collectors.toList());
         
         // 创建数据库操作对象
@@ -81,17 +78,17 @@ public class LocalList<T> implements AutoCloseable, List<T> {
 
     @Override
     public void close() {
-        databaseOpt.close();
+        Optional.ofNullable(databaseOpt).ifPresent(IDatabaseOpt::close);
     }
 
     @Override
     public int size() {
-        return databaseOpt.size();
+        return Optional.ofNullable(databaseOpt).map(IDatabaseOpt::size).orElse(0);
     }
 
     @Override
     public boolean isEmpty() {
-        return databaseOpt.size() == 0;
+        return size() == 0;
     }
 
     @Override
@@ -99,16 +96,19 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         throw new UnsupportedOperationException();
     }
 
+    @SuppressWarnings("NullableProblems")
     @Override
     public Iterator<T> iterator() {
         return new LocalListIterator();
     }
 
+    @SuppressWarnings("NullableProblems")
     @Override
     public Object[] toArray() {
         throw new UnsupportedOperationException();
     }
 
+    @SuppressWarnings("NullableProblems")
     @Override
     public <T1> T1[] toArray(T1[] a) {
         throw new UnsupportedOperationException();
@@ -117,6 +117,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     @Override
     public boolean add(T t) {
         if (databaseOpt == null) {
+            //noinspection unchecked
             init((Class<T>) t.getClass());
         }
         return databaseOpt.add(t);
@@ -127,29 +128,38 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         throw new UnsupportedOperationException();
     }
 
+    @SuppressWarnings("NullableProblems")
     @Override
     public boolean containsAll(Collection<?> c) {
         throw new UnsupportedOperationException();
     }
 
+    @SuppressWarnings("NullableProblems")
     @Override
     public boolean addAll(Collection<? extends T> c) {
         if (databaseOpt == null && c != null && !c.isEmpty()) {
-            init((Class<T>) c.iterator().next().getClass());
+            Class<T> clazz = (Class<T>) c.iterator().next().getClass();
+            init(clazz);
+        }
+        if (databaseOpt == null) {
+            throw new RuntimeException("数据源操作初始化失败");
         }
         return databaseOpt.addAll(c);
     }
 
+    @SuppressWarnings("NullableProblems")
     @Override
     public boolean addAll(int index, Collection<? extends T> c) {
         throw new UnsupportedOperationException();
     }
 
+    @SuppressWarnings("NullableProblems")
     @Override
     public boolean removeAll(Collection<?> c) {
         throw new UnsupportedOperationException();
     }
 
+    @SuppressWarnings("NullableProblems")
     @Override
     public boolean retainAll(Collection<?> c) {
         throw new UnsupportedOperationException();
@@ -190,11 +200,13 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         throw new UnsupportedOperationException();
     }
 
+    @SuppressWarnings("NullableProblems")
     @Override
     public ListIterator<T> listIterator() {
         return new LocalListIterator();
     }
 
+    @SuppressWarnings("NullableProblems")
     @Override
     public ListIterator<T> listIterator(int index) {
         return new LocalListIterator(index);
@@ -208,6 +220,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * @param toIndex   结束索引（不包含）
      * @return 包含指定范围元素的新ArrayList
      */
+    @SuppressWarnings("NullableProblems")
     @Override
     public List<T> subList(int fromIndex, int toIndex) {
         if (fromIndex < 0)

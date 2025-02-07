@@ -1,12 +1,12 @@
 package lordeath.local.collection.test;
 
-import lordeath.local.collection.LocalList;
-import lordeath.local.collection.LocalMap;
 import com.google.common.collect.Lists;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import lordeath.local.collection.LocalList;
+import lordeath.local.collection.LocalMap;
 import org.apache.commons.lang3.reflect.FieldUtils;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -153,6 +153,28 @@ public class LocalListTest {
             }
 
         }
+
+        try (LocalMap<String, String> map = new LocalMap<>()) {
+            map.put("a", "b");
+
+            assertEquals("a", map.keySet().iterator().next());
+            assertEquals("b", map.get("a"));
+            assertEquals("b", map.getInnerList().get(0));
+
+            map.remove("a");
+            assertEquals(0, map.size());
+        }
+
+        try (LocalMap<String, TestBean1> map = new LocalMap<>()) {
+            map.put("a", new TestBean1("1", 2));
+            assertEquals("a", map.keySet().iterator().next());
+            assertEquals("1", map.get("a").name);
+            assertEquals(2, map.get("a").age);
+
+            map.remove("a");
+            assertEquals(0, map.size());
+        }
+
     }
 
     @Data

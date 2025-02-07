@@ -1,5 +1,6 @@
 package lordeath.local.collection;
 
+import lombok.Getter;
 import lordeath.local.collection.db.bean.LocalColumn;
 import lordeath.local.collection.db.bean.LocalColumnForMap;
 import lordeath.local.collection.db.util.DBUtil;
@@ -16,13 +17,17 @@ import java.util.*;
  * @param <V> 值类型
  */
 @Slf4j
+@Getter
 public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
     private final String keyColumn;
-    private final Class<V> valueClass;
     private final LocalList<V> innerList;
 
-    private LocalMap(Class<V> valueClass, String keyColumn, LocalList<V> innerList) {
-        this.valueClass = valueClass;
+    public LocalMap() {
+        this.keyColumn = "key_" + UUID.randomUUID().toString().replace("-", "");
+        innerList = new LocalList<>();
+    }
+
+    private LocalMap(String keyColumn, LocalList<V> innerList) {
         this.keyColumn = keyColumn;
         this.innerList = innerList;
     }
@@ -44,18 +49,67 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
 
     @Override
     public boolean containsValue(Object value) {
-        return innerList.contains(value);
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public V get(Object key) {
-        return (V) innerList.getDatabaseOpt().getByKey(keyColumn, key);
+        return innerList.getDatabaseOpt().getByKey(keyColumn, key);
     }
 
     @Override
     public V put(K key, V value) {
-//        throw new UnsupportedOperationException("LocalMap is read-only");
-        return (V) innerList.getDatabaseOpt().putByKey(keyColumn, key + "", value);
+        if (innerList.getDatabaseOpt() == null) {
+//            innerList.init((Class<V>) value.getClass());
+            Class<?> resultClass = value.getClass();
+            String newTableName = "map_" + UUID.randomUUID().toString().replace("-", "");
+
+            List<LocalColumnForMap> columnForMapList = new ArrayList<>();
+
+            {
+                LocalColumnForMap localColumnForMap = new LocalColumnForMap();
+                localColumnForMap.setKey(true);
+//                localColumnForMap.setExpression(String.join(" || '.' || ", groupByColumns) + " AS " + keyColumn);
+                localColumnForMap.setExpression(keyColumn);
+                localColumnForMap.setSinkColumn(new LocalColumn(keyColumn, key.getClass(), DBUtil.getSqlType(key.getClass()), null));
+                columnForMapList.add(localColumnForMap);
+            }
+
+            String sqlType = DBUtil.getSqlTypeOrNull(resultClass);
+            if (sqlType != null) {
+                LocalColumnForMap localColumnForMap = new LocalColumnForMap();
+                localColumnForMap.setExpression("value_column");
+                localColumnForMap.setSinkColumn(new LocalColumn("value_column", resultClass, sqlType, null));
+                columnForMapList.add(localColumnForMap);
+            } else {
+                // 我们只需要关注我们自己需要采集的列就好，不需要把原先的列都采集过来
+                for (Field fieldGot : FieldUtils.getAllFieldsList(resultClass)) {
+                    String selectColumn = fieldGot.getName();
+                    LocalColumnForMap localColumnForMap = new LocalColumnForMap();
+                    localColumnForMap.setExpression(selectColumn);
+                    String sinkColumnName = selectColumn;
+                    sinkColumnName = StringUtils.replace(sinkColumnName, "\n", " ");
+                    sinkColumnName = StringUtils.replace(sinkColumnName, "\r", " ");
+                    if (StringUtils.containsIgnoreCase(sinkColumnName, " AS ")) {
+                        // 有别名，拿到别名
+                        sinkColumnName = selectColumn.substring(StringUtils.lastIndexOfIgnoreCase(selectColumn, " AS ") + " AS ".length()).trim();
+                    }
+                    // 通过别名，拿到字段名称
+                    Field field = FieldUtils.getDeclaredField(resultClass, sinkColumnName, true);
+                    if (field == null) {
+                        throw new UnsupportedOperationException("目标的类无法找到对应的字段: " + selectColumn);
+                    }
+                    localColumnForMap.setSinkColumn(new LocalColumn(sinkColumnName, field.getType(), DBUtil.getSqlType(field.getType()), field));
+                    columnForMapList.add(localColumnForMap);
+                }
+            }
+
+
+            LocalList<V> innerList = new LocalList<>((Class<V>) value.getClass(), newTableName, columnForMapList);
+            this.innerList.databaseOpt = innerList.databaseOpt;
+            this.innerList.columns = innerList.columns;
+        }
+        return innerList.getDatabaseOpt().putByKey(keyColumn, key + "", value);
     }
 
     @Override
@@ -69,7 +123,9 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
 
     @Override
     public void putAll(Map<? extends K, ? extends V> m) {
-        throw new UnsupportedOperationException("LocalMap is read-only");
+        for (Entry<? extends K, ? extends V> entry : m.entrySet()) {
+            put(entry.getKey(), entry.getValue());
+        }
     }
 
     @Override
@@ -78,17 +134,19 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "NullableProblems"})
     public Set<K> keySet() {
         List<String> keys = innerList.getDatabaseOpt().getAllKeys(keyColumn);
         return new HashSet<>((Collection<K>) keys);
     }
 
+    @SuppressWarnings("NullableProblems")
     @Override
     public Collection<V> values() {
         return Collections.unmodifiableList(innerList);
     }
 
+    @SuppressWarnings("NullableProblems")
     @Override
     public Set<Entry<K, V>> entrySet() {
         Set<Entry<K, V>> entries = new HashSet<>();
@@ -196,10 +254,20 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
             String newTableName = "map_" + UUID.randomUUID().toString().replace("-", "");
             String keyColumn = "key_" + UUID.randomUUID().toString().replace("-", "");
 
-//            // 获取结果类的字段信息
-//            List<LocalColumn> resultColumns = new ArrayList<>();
+            List<LocalColumnForMap> columnForMapList = getLocalColumnForMaps(keyColumn);
 
+            // 创建新的LocalList实例，使用自定义的列定义
+            LocalList<V> innerList = new LocalList<>((Class<V>) resultClass, newTableName, columnForMapList);
 
+            // 给这个innerList灌入数据，insert into sink_table (...) select ... from source_table where ... group by ...
+            innerList.getDatabaseOpt().insertGroupedData(source.getDatabaseOpt().getTableName()
+                    , newTableName, groupByColumns, whereClause, columnForMapList);
+
+            // 创建新的LocalMap实例
+            return new LocalMap<>(keyColumn, innerList);
+        }
+
+        private List<LocalColumnForMap> getLocalColumnForMaps(String keyColumn) {
             List<LocalColumnForMap> columnForMapList = new ArrayList<>();
 
             {
@@ -212,7 +280,6 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
             }
 
             // 我们只需要关注我们自己需要采集的列就好，不需要把原先的列都采集过来
-//            Map<String, LocalColumn> sourceColumnMap = this.source.getColumns().stream().collect(Collectors.toMap(LocalColumn::getColumnName, v -> v));
             for (String selectColumn : selectColumns) {
                 LocalColumnForMap localColumnForMap = new LocalColumnForMap();
                 localColumnForMap.setExpression(selectColumn);
@@ -231,16 +298,7 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
                 localColumnForMap.setSinkColumn(new LocalColumn(sinkColumnName, field.getType(), DBUtil.getSqlType(field.getType()), field));
                 columnForMapList.add(localColumnForMap);
             }
-
-            // 创建新的LocalList实例，使用自定义的列定义
-            LocalList<V> innerList = new LocalList<>((Class<V>) resultClass, newTableName, columnForMapList);
-
-            // 给这个innerList灌入数据，insert into sink_table (...) select ... from source_table where ... group by ...
-            innerList.getDatabaseOpt().insertGroupedData(source.getDatabaseOpt().getTableName()
-                    , newTableName, groupByColumns, whereClause, columnForMapList);
-
-            // 创建新的LocalMap实例
-            return new LocalMap<>((Class<V>) resultClass, keyColumn, innerList);
+            return columnForMapList;
         }
 
     }
