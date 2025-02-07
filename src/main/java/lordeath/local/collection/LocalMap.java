@@ -16,7 +16,7 @@ import java.util.*;
  * @param <V> 值类型
  */
 @Slf4j
-public class LocalMap<K, V> implements Map<K, V>, AutoCloseable {
+public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
     private final String keyColumn;
     private final Class<V> valueClass;
     private final LocalList<V> innerList;
@@ -191,7 +191,7 @@ public class LocalMap<K, V> implements Map<K, V>, AutoCloseable {
          * @return LocalMap实例
          */
         @SuppressWarnings("unchecked")
-        public <K, V> LocalMap<K, V> build() {
+        public <K extends String, V> LocalMap<K, V> build() {
             // 生成新表名和key列名
             String newTableName = "map_" + UUID.randomUUID().toString().replace("-", "");
             String keyColumn = "key_" + UUID.randomUUID().toString().replace("-", "");

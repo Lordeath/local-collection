@@ -76,9 +76,6 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         
         // 创建数据库操作对象
         this.databaseOpt = DatabaseFactory.createDatabaseOpt(clazz, tableName, columnsForMap);
-        
-//        // 创建表
-//        databaseOpt.createTable(tableName, columns);
     }
 
 
