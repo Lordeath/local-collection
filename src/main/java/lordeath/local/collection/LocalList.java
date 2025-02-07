@@ -10,6 +10,8 @@ import lordeath.local.collection.db.opt.impl.SqliteOpt;
 import lordeath.local.collection.db.opt.inter.IDatabaseOpt;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static lordeath.local.collection.db.config.MainConfig.CONST_DB_ENGINE;
@@ -24,6 +26,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
 
     IDatabaseOpt<T> databaseOpt;
     List<LocalColumn> columns;
+    private final AtomicBoolean removeFlag = new AtomicBoolean(false);
 
     /**
      * 创建一个空的LocalList
@@ -166,7 +169,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
 
     @Override
     public T get(int index) {
-        return databaseOpt.get(index);
+        return databaseOpt.get(index, removeFlag.get());
     }
 
     @Override
@@ -181,6 +184,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
 
     @Override
     public T remove(int index) {
+        removeFlag.set(true);
         return databaseOpt.remove(index);
     }
 
@@ -238,6 +242,9 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * @return 主键的长整型值
      */
     public long pk(int index) {
+        if (!removeFlag.get()) {
+            return index;
+        }
         return databaseOpt.pk(index);
     }
 

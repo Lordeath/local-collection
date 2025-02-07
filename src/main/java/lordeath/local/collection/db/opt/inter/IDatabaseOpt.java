@@ -50,10 +50,12 @@ public interface IDatabaseOpt<T> {
 
     /**
      * 获取指定索引的对象
-     * @param index 对象索引
+     *
+     * @param index      对象索引
+     * @param removeFlag
      * @return 指定索引的对象
      */
-    T get(int index);
+    T get(int index, boolean removeFlag);
 
     /**
      * 设置指定索引的对象

@@ -168,12 +168,14 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     /**
      * 获取指定索引的元素
-     * @param index 索引
+     *
+     * @param index      索引
+     * @param removeFlag
      * @return 元素
      */
     @Override
-    public T get(int index) {
-        return DBUtil.get(index, tableName, columns, pkColumnName, dataSource, clazz);
+    public T get(int index, boolean removeFlag) {
+        return DBUtil.get(index, tableName, columns, pkColumnName, dataSource, clazz, removeFlag);
     }
 
     /**

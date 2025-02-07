@@ -129,7 +129,7 @@ public class DBUtil {
      */
     public static <T> T remove(int index, String tableName, String pkColumnName, List<LocalColumn> columns, DataSource dataSource, Class<T> clazz) {
         // 先获取要删除的数据
-        T obj = get(index, tableName, columns, pkColumnName, dataSource, clazz);
+        T obj = get(index, tableName, columns, pkColumnName, dataSource, clazz, true);
         if (obj == null) {
             return null;
         }
@@ -150,26 +150,36 @@ public class DBUtil {
     /**
      * 获取数据
      *
+     * @param <T>          数据类型
      * @param index        索引
      * @param tableName    表名
      * @param columns      列定义
      * @param pkColumnName 主键列名
      * @param dataSource   数据源
      * @param clazz        数据类型
-     * @param <T>          数据类型
+     * @param removeFlag
      * @return 数据
      */
-    public static <T> T get(int index, String tableName, List<LocalColumn> columns, String pkColumnName, DataSource dataSource, Class<T> clazz) {
-        // 通过主键进行排序，然后查询，limit offset 1
-        // 拼接sql
-        StringBuilder sql = new StringBuilder("select * from ")
-                .append(tableName);
-        if (pkColumnName != null) {
-            sql.append(" order by ").append(pkColumnName);
+    public static <T> T get(int index, String tableName, List<LocalColumn> columns, String pkColumnName, DataSource dataSource, Class<T> clazz, boolean removeFlag) {
+        if (removeFlag || pkColumnName == null) {
+            // 通过主键进行排序，然后查询，limit offset 1
+            // 拼接sql
+            StringBuilder sql = new StringBuilder("select * from ")
+                    .append(tableName);
+            if (pkColumnName != null) {
+                sql.append(" order by ").append(pkColumnName);
+            }
+            sql.append(" limit 1 offset ").append(index);
+            log.debug("查询数据的sql: {}", sql);
+            return DBUtil.querySingle(dataSource, sql.toString(), columns, clazz);
+        } else {
+            // 如果主键没有修改过，也就是说没有被移除过，那说明get是可以直接用index来作为pk的
+            // 注意下标要加1，因为下标从0开始，而自增从1开始
+            StringBuilder sql = new StringBuilder("select * from ").append(tableName);
+            sql.append(" where ").append(pkColumnName).append(" = ").append(index + 1);
+            log.debug("查询数据的sql: {}", sql);
+            return DBUtil.querySingle(dataSource, sql.toString(), columns, clazz);
         }
-        sql.append(" limit 1 offset ").append(index);
-        log.debug("查询数据的sql: {}", sql);
-        return DBUtil.querySingle(dataSource, sql.toString(), columns, clazz);
     }
 
     /**
