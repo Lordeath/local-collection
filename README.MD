@@ -17,16 +17,10 @@
 
 集成方式，以h2举例：
 ```xml
-<!-- 手动添加需要的数据库类型，当前支持h2,sqlite,hsqldb,derby -->
-<dependency>
-    <groupId>com.h2database</groupId>
-    <artifactId>h2</artifactId>
-    <version>2.3.232</version>
-</dependency>
 <dependency>
     <groupId>io.github.lordeath</groupId>
     <artifactId>local-collection</artifactId>
-    <version>1.0.20250125.1</version>
+    <version>1.0.20250207.8</version>
 </dependency>
 ```
 
