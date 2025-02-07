@@ -1,6 +1,7 @@
 package lordeath.local.collection.db.util;
 
 import com.google.common.collect.Lists;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lordeath.local.collection.db.bean.LocalColumn;
 import lordeath.local.collection.db.bean.LocalColumnForMap;
@@ -13,6 +14,7 @@ import java.sql.*;
 import java.util.Date;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 数据库工具类
@@ -391,6 +393,9 @@ public class DBUtil {
         return DBUtil.querySingle(dataSource, sql.toString(), Lists.newArrayList(new LocalColumn("count", Integer.class, "INT", null)), Integer.class);
     }
 
+
+    public static final AtomicInteger dropTableCounter = new AtomicInteger(0);
+
     /**
      * 删除表
      *
@@ -400,8 +405,9 @@ public class DBUtil {
     public static void drop(String tableName, DataSource dataSource) {
         // 删除表的数据
         StringBuilder sql = new StringBuilder("drop table ").append(tableName);
-        log.debug("删除表的sql: {}", sql);
+        log.warn("删除表的sql: {}", sql);
         DBUtil.executeSql(dataSource, sql.toString());
+        dropTableCounter.incrementAndGet();
     }
 
     /**

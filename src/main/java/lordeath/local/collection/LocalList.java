@@ -98,6 +98,17 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         }
     }
 
+    /**
+     * 确保对象回收时，删除表
+     *
+     * @throws Throwable 可能抛出异常
+     */
+    @Override
+    protected void finalize() throws Throwable {
+        close();
+        super.finalize();
+    }
+
     @Override
     public int size() {
 //        return Optional.ofNullable(databaseOpt).map(IDatabaseOpt::size).orElse(0);
