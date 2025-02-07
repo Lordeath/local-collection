@@ -161,7 +161,7 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
      */
     @Override
     public void close() {
-        DBUtil.extracted(tableName, dataSource);
+        DBUtil.drop(tableName, dataSource);
     }
 
     /**

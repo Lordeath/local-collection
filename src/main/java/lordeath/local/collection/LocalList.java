@@ -9,6 +9,7 @@ import lordeath.local.collection.db.opt.impl.H2Opt;
 import lordeath.local.collection.db.opt.impl.SqliteOpt;
 import lordeath.local.collection.db.opt.inter.IDatabaseOpt;
 
+import java.lang.ref.Cleaner;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,11 +31,15 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     // 使用缓存来提升循环速度
     private final AtomicInteger sizeCounter = new AtomicInteger(0);
 
+    private static final Cleaner cleaner = Cleaner.create();
+    private final Cleaner.Cleanable cleanable;
+
     /**
      * 创建一个空的LocalList
      */
     public LocalList() {
         databaseOpt = null;
+        cleanable = cleaner.register(this, this::close);
     }
 
     /**
@@ -44,6 +49,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     public LocalList(Class<T> clazz) {
         init(clazz);
+        cleanable = cleaner.register(this, this::close);
     }
 
     /**
@@ -75,12 +81,16 @@ public class LocalList<T> implements AutoCloseable, List<T> {
 
         // 创建数据库操作对象
         this.databaseOpt = DatabaseFactory.createDatabaseOpt(clazz, tableName, columnsForMap);
+        this.cleanable = cleaner.register(this, this::close);
     }
 
 
     @Override
     public void close() {
-        Optional.ofNullable(databaseOpt).ifPresent(IDatabaseOpt::close);
+        try {
+            Optional.ofNullable(databaseOpt).ifPresent(IDatabaseOpt::close);
+        } catch (Throwable e) {
+        }
     }
 
     @Override
@@ -253,6 +263,19 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         // 返回一个不可修改的List视图
         return Collections.unmodifiableList(batchResult);
     }
+
+//    /**
+//     * 对象被回收的时候，删除表
+//     * @throws Throwable
+//     */
+//    @Override
+//    protected void finalize() throws Throwable {
+//        try {
+//            close();
+//        } finally {
+//            super.finalize();
+//        }
+//    }
 
     /**
      * 检索指定索引处的主键。

@@ -397,7 +397,7 @@ public class DBUtil {
      * @param tableName  表名
      * @param dataSource 数据源
      */
-    public static void extracted(String tableName, DataSource dataSource) {
+    public static void drop(String tableName, DataSource dataSource) {
         // 删除表的数据
         StringBuilder sql = new StringBuilder("drop table ").append(tableName);
         log.debug("删除表的sql: {}", sql);
