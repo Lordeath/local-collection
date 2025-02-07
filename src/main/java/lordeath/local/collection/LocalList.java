@@ -1,5 +1,7 @@
 package lordeath.local.collection;
 
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import lordeath.local.collection.db.bean.LocalColumn;
 import lordeath.local.collection.db.bean.LocalColumnForMap;
 import lordeath.local.collection.db.opt.factory.DatabaseFactory;
@@ -8,8 +10,6 @@ import lordeath.local.collection.db.opt.impl.H2Opt;
 import lordeath.local.collection.db.opt.impl.HSQLDBOpt;
 import lordeath.local.collection.db.opt.impl.SqliteOpt;
 import lordeath.local.collection.db.opt.inter.IDatabaseOpt;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -50,9 +50,10 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     private void init(Class<T> clazz) {
         String dbEngine = System.getProperty(CONST_DB_ENGINE);
-        if (dbEngine == null || "h2".equalsIgnoreCase(dbEngine)) {
+        if ("h2".equalsIgnoreCase(dbEngine)) {
             databaseOpt = new H2Opt<>(clazz);
-        } else if ("sqlite".equalsIgnoreCase(dbEngine)) {
+        } else if (dbEngine == null || "sqlite".equalsIgnoreCase(dbEngine)) {
+            // 默认的改成sqlite，因为sqlite的内存降低是最明显的
             databaseOpt = new SqliteOpt<>(clazz);
         } else if ("hsqldb".equalsIgnoreCase(dbEngine)) {
             databaseOpt = new HSQLDBOpt<>(clazz);
@@ -136,6 +137,9 @@ public class LocalList<T> implements AutoCloseable, List<T> {
 
     @Override
     public boolean addAll(Collection<? extends T> c) {
+        if (databaseOpt == null && c != null && !c.isEmpty()) {
+            init((Class<T>) c.iterator().next().getClass());
+        }
         return databaseOpt.addAll(c);
     }
 

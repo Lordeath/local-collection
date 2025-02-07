@@ -28,4 +28,9 @@ public class HSQLDBTest {
         testCases();
     }
 
+//    @Test
+    public void testMemoryCost() throws InterruptedException {
+        // HSQLDB的内存消耗比较大，暂时不测试
+        MemoryCostTest.testMemoryCostAll();
+    }
 }

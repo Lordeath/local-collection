@@ -20,9 +20,9 @@
     <version>2.3.232</version>
 </dependency>
 <dependency>
-    <groupId>fxm</groupId>
+    <groupId>io.github.lordeath</groupId>
     <artifactId>local-collection</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.20250125.1</version>
 </dependency>
 ```
 
@@ -40,3 +40,5 @@ try (LocalList<String> list = new LocalList<>(String.class)) {
 心得体会：
 
 速度要求高的话，还是h2或者hsqldb比较好，sqlite的性能不如这2个，derby的性能和社区活跃度都不如以上的这些，不建议选择derby
+sqlite在固态硬盘上的表现和h2类似，但是内存开销是sqlite大大优于其他
+hsqldb在内存上的表现还不如直接用ArrayList，所以hsqldb之后也会放弃相关开发

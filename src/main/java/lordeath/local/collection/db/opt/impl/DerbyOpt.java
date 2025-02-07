@@ -46,7 +46,7 @@ public class DerbyOpt<T> implements IDatabaseOpt<T> {
         dataSource = DerbyConfig.getDataSource();
         tableName = "tmp_" + UUID.randomUUID().toString().replace("-", "");
         pkColumnName = "id" + UUID.randomUUID().toString().replace("-", "");
-        log.info("开始初始化数据源: {} {}", dataSource, tableName);
+        log.debug("开始初始化数据源: {} {}", dataSource, tableName);
         columns = Collections.unmodifiableList(ColumnNameUtil.getFields(clazz));
         // 创建表
         // 1. 获取到表名
@@ -62,10 +62,10 @@ public class DerbyOpt<T> implements IDatabaseOpt<T> {
             }
         }
         sql.append(")");
-        log.info("创建表的sql: {}", sql);
+        log.debug("创建表的sql: {}", sql);
         // 执行sql
         DBUtil.executeSql(dataSource, sql.toString());
-        log.info("数据源初始化完毕: {} {}", dataSource, tableName);
+        log.debug("数据源初始化完毕: {} {}", dataSource, tableName);
     }
 
     /**
@@ -80,7 +80,7 @@ public class DerbyOpt<T> implements IDatabaseOpt<T> {
         this.tableName = tableName;
         this.columns = columnsForMap.stream().map(LocalColumnForMap::getSinkColumn).collect(Collectors.toList());
         dataSource = DerbyConfig.getDataSource();
-        log.info("开始初始化数据源: {} {}", dataSource, tableName);
+        log.debug("开始初始化数据源: {} {}", dataSource, tableName);
         // 创建表
         StringBuilder sql = new StringBuilder("create table ").append(tableName)
                 .append(" (");
@@ -93,7 +93,7 @@ public class DerbyOpt<T> implements IDatabaseOpt<T> {
         }
         sql.delete(sql.length() - 2, sql.length());
         sql.append(")");
-        log.info("创建表的sql: {}", sql);
+        log.debug("创建表的sql: {}", sql);
         // 执行sql
         DBUtil.executeSql(dataSource, sql.toString());
 
@@ -101,10 +101,10 @@ public class DerbyOpt<T> implements IDatabaseOpt<T> {
         String pks = columnsForMap.stream().filter(LocalColumnForMap::isKey).map(m -> m.getSinkColumn().getColumnName()).collect(Collectors.joining(","));
         sql = new StringBuilder("create index idx_").append(StringUtils.replace(pks, ",", "_"))
                 .append(" ON ").append(tableName).append("(").append(pks).append(")");
-        log.info("表创建完毕，接下来设置map的key索引: {}", sql);
+        log.debug("表创建完毕，接下来设置map的key索引: {}", sql);
         DBUtil.executeSql(dataSource, sql.toString());
         pkColumnName = null;
-        log.info("数据源初始化完毕: {} {}", dataSource, tableName);
+        log.debug("数据源初始化完毕: {} {}", dataSource, tableName);
     }
 
     /**
@@ -186,7 +186,7 @@ public class DerbyOpt<T> implements IDatabaseOpt<T> {
         // 拼接sql
         StringBuilder sql = new StringBuilder("select * from ")
                 .append(tableName).append(" order by ").append(pkColumnName).append(" OFFSET ").append(index).append(" ROWS FETCH NEXT 1 ROWS ONLY");
-        log.info("查询数据的sql: {}", sql);
+        log.debug("查询数据的sql: {}", sql);
         return DBUtil.querySingle(dataSource, sql.toString(), columns, clazz);
     }
 
@@ -239,7 +239,7 @@ public class DerbyOpt<T> implements IDatabaseOpt<T> {
     public long pk(int index) {
         StringBuilder sql = new StringBuilder("select ").append(pkColumnName).append(" from ")
                 .append(tableName).append(" order by ").append(pkColumnName).append(" OFFSET ").append(index).append(" ROWS FETCH NEXT 1 ROWS ONLY");
-        log.info("查询数据的id的sql: {}", sql);
+        log.debug("查询数据的id的sql: {}", sql);
         Long id = DBUtil.querySingle(dataSource, sql.toString(), Lists.newArrayList(new LocalColumn(pkColumnName, Long.class, "BIGINT", null)), Long.class);
         if (id == null) {
             throw new RuntimeException("没有找到对应的数据");
@@ -264,7 +264,7 @@ public class DerbyOpt<T> implements IDatabaseOpt<T> {
                 .append(" OFFSET ").append(fromIndex)
                 .append(" ROWS FETCH NEXT ").append(toIndex - fromIndex).append(" ROWS ONLY");
 
-        log.info("批量查询数据的sql: {}", sql);
+        log.debug("批量查询数据的sql: {}", sql);
 
         List<T> result = new ArrayList<>();
         try (Connection connection = dataSource.getConnection();

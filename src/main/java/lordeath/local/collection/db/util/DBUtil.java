@@ -39,7 +39,7 @@ public class DBUtil {
         }
         sql.setLength(sql.length() - 2);
         sql.append(")");
-        log.info("插入数据的sql: {}", sql);
+        log.debug("插入数据的sql: {}", sql);
 
         try (Connection connection = dataSource.getConnection();
              PreparedStatement stmt = connection.prepareStatement(sql.toString())) {
@@ -86,7 +86,7 @@ public class DBUtil {
         }
         sql.setLength(sql.length() - 2);
         sql.append(")");
-        log.info("批量插入数据的sql: {}", sql);
+        log.debug("批量插入数据的sql: {}", sql);
 
         try (Connection connection = dataSource.getConnection();
              PreparedStatement stmt = connection.prepareStatement(sql.toString())) {
@@ -164,7 +164,7 @@ public class DBUtil {
         // 拼接sql
         StringBuilder sql = new StringBuilder("select * from ")
                 .append(tableName).append(" order by ").append(pkColumnName).append(" limit 1 offset ").append(index);
-        log.info("查询数据的sql: {}", sql);
+        log.debug("查询数据的sql: {}", sql);
         return DBUtil.querySingle(dataSource, sql.toString(), columns, clazz);
     }
 
@@ -188,7 +188,7 @@ public class DBUtil {
                 .append(pkColumnName)
                 .append(" LIMIT ? OFFSET ?");
 
-        log.info("批量查询数据的sql: {}", sql);
+        log.debug("批量查询数据的sql: {}", sql);
 
         List<T> result = new ArrayList<>();
         try (Connection connection = dataSource.getConnection();
@@ -316,7 +316,7 @@ public class DBUtil {
     public static Integer size(String tableName, DataSource dataSource) {
         // 查询表的数据量
         StringBuilder sql = new StringBuilder("select count(*) AS count from ").append(tableName);
-        log.info("查询数据量的sql: {}", sql);
+        log.debug("查询数据量的sql: {}", sql);
         return DBUtil.querySingle(dataSource, sql.toString(), Lists.newArrayList(new LocalColumn("count", Integer.class, "INT", null)), Integer.class);
     }
 
@@ -328,7 +328,7 @@ public class DBUtil {
     public static void extracted(String tableName, DataSource dataSource) {
         // 删除表的数据
         StringBuilder sql = new StringBuilder("drop table ").append(tableName);
-        log.info("删除表的sql: {}", sql);
+        log.debug("删除表的sql: {}", sql);
         DBUtil.executeSql(dataSource, sql.toString());
     }
 
@@ -404,7 +404,7 @@ public class DBUtil {
         // 查出原有的数据的id，然后进行更新
         StringBuilder sql = new StringBuilder("SELECT ").append(pkColumnName).append(" FROM ")
                 .append(tableName).append(" ORDER BY ").append(pkColumnName).append(" LIMIT 1 OFFSET ").append(index);
-        log.info("查询数据的id的sql: {}", sql);
+        log.debug("查询数据的id的sql: {}", sql);
         Long id = DBUtil.querySingle(dataSource, sql.toString(), Lists.newArrayList(new LocalColumn(pkColumnName, Long.class, "BIGINT", null)), Long.class);
         if (id == null) {
             throw new RuntimeException("没有找到对应的数据");

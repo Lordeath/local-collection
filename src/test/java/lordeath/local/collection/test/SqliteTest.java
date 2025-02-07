@@ -29,5 +29,9 @@ public class SqliteTest {
         testCases();
     }
 
+    @Test
+    public void testMemoryCost() throws InterruptedException {
+        MemoryCostTest.testMemoryCostAll();
+    }
 
 }

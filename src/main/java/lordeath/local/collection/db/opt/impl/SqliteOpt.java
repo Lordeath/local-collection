@@ -56,7 +56,7 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
         dataSource = SqliteConfig.getDataSource();
         tableName = "tmp_" + UUID.randomUUID().toString().replace("-", "");
         pkColumnName = "id" + UUID.randomUUID().toString().replace("-", "");
-        log.info("开始初始化数据源: {} {}", dataSource, tableName);
+        log.debug("开始初始化数据源: {} {}", dataSource, tableName);
         columns = Collections.unmodifiableList(ColumnNameUtil.getFields(clazz));
         // 创建表
         // 1. 获取到表名
@@ -68,10 +68,10 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
             sql.append(", ").append(column.getColumnName()).append(" ").append(column.getDbType());
         }
         sql.append(");");
-        log.info("创建表的sql: {}", sql);
+        log.debug("创建表的sql: {}", sql);
         // 执行sql
         DBUtil.executeSql(dataSource, sql.toString());
-        log.info("数据源初始化完毕: {} {}", dataSource, tableName);
+        log.debug("数据源初始化完毕: {} {}", dataSource, tableName);
     }
 
     /**
@@ -85,7 +85,7 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
         this.tableName = tableName;
         this.columns = columnsForMap.stream().map(LocalColumnForMap::getSinkColumn).collect(Collectors.toList());
         dataSource = SqliteConfig.getDataSource();
-        log.info("开始初始化数据源: {} {}", dataSource, tableName);
+        log.debug("开始初始化数据源: {} {}", dataSource, tableName);
         // 创建表
         StringBuilder sql = new StringBuilder("create table ").append(tableName)
                 .append(" (");
@@ -94,7 +94,7 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
         }
         sql.delete(sql.length() - 2, sql.length());
         sql.append(");");
-        log.info("创建表的sql: {}", sql);
+        log.debug("创建表的sql: {}", sql);
         // 执行sql
         DBUtil.executeSql(dataSource, sql.toString());
 
@@ -102,10 +102,10 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
         String pks = columnsForMap.stream().filter(LocalColumnForMap::isKey).map(m -> m.getSinkColumn().getColumnName()).collect(Collectors.joining(","));
         sql = new StringBuilder("create index idx_").append(StringUtils.replace(pks, ",", "_"))
                 .append(" ON ").append(tableName).append("(").append(pks).append(")");
-        log.info("表创建完毕，接下来设置map的key索引: {}", sql);
+        log.debug("表创建完毕，接下来设置map的key索引: {}", sql);
         DBUtil.executeSql(dataSource, sql.toString());
         pkColumnName = null;
-        log.info("数据源初始化完毕: {} {}", dataSource, tableName);
+        log.debug("数据源初始化完毕: {} {}", dataSource, tableName);
     }
 
     /**
@@ -145,7 +145,7 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
     public void clear() {
         // 删除表的数据
         StringBuilder sql = new StringBuilder("delete from ").append(tableName).append(";");
-        log.info("清空表的sql: {}", sql);
+        log.debug("清空表的sql: {}", sql);
         DBUtil.executeSql(dataSource, sql.toString());
     }
 

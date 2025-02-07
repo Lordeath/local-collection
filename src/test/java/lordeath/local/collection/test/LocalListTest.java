@@ -105,11 +105,11 @@ public class LocalListTest {
             assertEquals(100, list.size());
 
             for (TestBean1 testBean1 : list) {
-                log.info("正在遍历: {}", testBean1);
+                log.debug("正在遍历: {}", testBean1);
             }
             assertEquals(100, list.subList(0, 100).size());
             for (TestBean1 testBean1 : list.subList(0, 100)) {
-                log.info("正在内存遍历: {}", testBean1);
+                log.debug("正在内存遍历: {}", testBean1);
             }
             assertEquals(99, list.subList(1, 100).size());
             assertEquals(1, list.subList(1, 100).get(0).age);

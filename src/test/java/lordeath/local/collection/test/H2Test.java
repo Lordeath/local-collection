@@ -28,4 +28,9 @@ public class H2Test {
         testCases();
     }
 
+    @Test
+    public void testMemoryCost() throws InterruptedException {
+        MemoryCostTest.testMemoryCostAll();
+    }
+
 }
