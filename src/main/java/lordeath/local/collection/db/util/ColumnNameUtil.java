@@ -4,6 +4,7 @@ import lordeath.local.collection.db.bean.LocalColumn;
 import org.apache.commons.lang3.reflect.FieldUtils;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
@@ -29,6 +30,9 @@ public class ColumnNameUtil {
         }
         List<LocalColumn> list = new ArrayList<>();
         for (Field field : FieldUtils.getAllFields(clazz)) {
+            if (Modifier.isFinal(field.getModifiers()) && Modifier.isStatic(field.getModifiers())) {
+                continue;
+            }
             LocalColumn localColumn = getLocalColumns(field.getType(), field.getName(), field);
             if (localColumn != null) {
                 list.add(localColumn);
