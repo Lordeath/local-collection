@@ -126,7 +126,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      *
      * @throws Throwable 可能抛出异常
      */
-    @SuppressWarnings("removal")
+    @SuppressWarnings({"removal", "deprecation"})
     @Override
     protected void finalize() throws Throwable {
         close();
@@ -204,10 +204,10 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * @param t 要添加的元素
      * @return 添加成功返回true，否则返回false
      */
+    @SuppressWarnings("unchecked")
     @Override
     public boolean add(T t) {
         if (databaseOpt == null) {
-            //noinspection unchecked
             init((Class<T>) t.getClass());
         }
         boolean b = databaseOpt.add(t);
