@@ -32,6 +32,12 @@ public class LocalListTest {
             assertEquals(new Date(20000000), list.get(1).getBirthTime());
             assertEquals(new BigDecimal("789.654321"), list.get(1).getMoney());
             assertEquals(new BigDecimal("123456789.123456789"), list.get(2).getMoney());
+            assertEquals(1, list.pk(0));
+            assertEquals(2, list.pk(1));
+            assertEquals(3, list.pk(2));
+            list.remove(1);
+            assertEquals(1, list.pk(0));
+            assertEquals(3, list.pk(1));
         }
 
 

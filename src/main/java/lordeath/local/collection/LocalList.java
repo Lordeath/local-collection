@@ -301,7 +301,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     public long pk(int index) {
         if (!removeFlag.get()) {
-            return index;
+            return index + 1;
         }
         return databaseOpt.pk(index);
     }
