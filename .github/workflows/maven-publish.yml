@@ -25,6 +25,16 @@ jobs:
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 
+    - name: maven-settings-action
+      # You may pin to the exact commit or the version.
+      # uses: s4u/maven-settings-action@64e42c454dbd42ef6370ac8539685755aedd205b
+      uses: s4u/maven-settings-action@v3.1.0
+      with:
+        servers: '[{"id": "central", "username": env.USERNAME, "password": env.PASSWORD},{"id": "ossrh", "username": env.USERNAME, "password": env.PASSWORD}]'
+      env:
+        USERNAME: ${{ publish.USERNAME }}
+        PASSWORD: ${{ publish.PASSWORD }}
+
     - name: Build with Maven
       run: mvn -B package --file pom.xml
 
