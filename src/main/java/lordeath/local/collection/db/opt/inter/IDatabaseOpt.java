@@ -15,6 +15,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public interface IDatabaseOpt<T> {
 
+    /**
+     * 获取当前数据源
+     *
+     * @return 数据源
+     */
     DataSource getDataSource();
 
     /**
@@ -142,7 +147,7 @@ public interface IDatabaseOpt<T> {
      * @param keyColumn key列名
      * @param key       key值
      * @param value     要存储的对象
-     * @param removed
+     * @param removed   用于判断列表是否被移除过元素，如果移除过，就需要重新查询id，如果没有移除过，就可以用下标+1作为id来查找数据
      * @return 原对象（如果存在）
      */
     T putByKey(String keyColumn, String key, T value, AtomicBoolean removed);
