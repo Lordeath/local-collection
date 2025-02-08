@@ -26,9 +26,14 @@ jobs:
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 
-    - name: setup-gpg
-      uses: olafurpg/setup-gpg@v3
-          
+    # - name: setup-gpg
+    #   uses: olafurpg/setup-gpg@v3
+    - name: Import GPG Key
+      uses: crazy-max/ghaction-import-gpg@v6
+      with:
+        gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+        passphrase: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
+
 
     - name: maven-settings-action 设置maven所需的账号密码
       uses: s4u/maven-settings-action@v3.1.0
