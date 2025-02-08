@@ -179,7 +179,7 @@ public class H2Opt<T> implements IDatabaseOpt<T> {
      * 获取指定索引的元素
      *
      * @param index      索引
-     * @param removeFlag
+     * @param removeFlag 用于判断是否对集合操作过移除，如果没有操作过移除，那就可以用下标+1作为id来进行查询
      * @return 元素
      */
     @Override

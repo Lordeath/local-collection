@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 /**
  * SQLite数据库操作实现类
  * 通过操作SQLite数据库来实现对数据的操作，注意，这个类是线程不安全的
+ *
  * @param <T> 数据类型
  */
 @Slf4j
@@ -51,6 +52,7 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     /**
      * 使用指定的元素类型构造数据库操作对象
+     *
      * @param clazz 元素类型
      */
     public SqliteOpt(Class<T> clazz) {
@@ -78,8 +80,9 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     /**
      * 使用指定的元素类型、表名和列映射构造数据库操作对象
-     * @param clazz 元素类型
-     * @param tableName 表名
+     *
+     * @param clazz         元素类型
+     * @param tableName     表名
      * @param columnsForMap 列映射定义
      */
     public SqliteOpt(Class<T> clazz, String tableName, List<LocalColumnForMap> columnsForMap) {
@@ -112,6 +115,7 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     /**
      * 添加元素到数据库
+     *
      * @param obj 元素
      * @return 添加成功与否
      */
@@ -122,6 +126,7 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     /**
      * 批量添加元素到数据库
+     *
      * @param c 元素集合
      * @return 添加成功与否
      */
@@ -132,6 +137,7 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     /**
      * 移除指定索引的元素
+     *
      * @param index 索引
      * @return 移除的元素
      */
@@ -161,6 +167,7 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     /**
      * 获取数据库大小
+     *
      * @return 大小
      */
     @Override
@@ -172,7 +179,7 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
      * 获取指定索引的元素
      *
      * @param index      索引
-     * @param removeFlag
+     * @param removeFlag 用于判断是否对集合操作过移除，如果没有操作过移除，那就可以用下标+1作为id来进行查询
      * @return 元素
      */
     @Override
@@ -182,7 +189,8 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     /**
      * 设置指定索引的元素
-     * @param index 索引
+     *
+     * @param index   索引
      * @param element 元素
      * @return 原元素
      */
@@ -193,6 +201,7 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     /**
      * 获取指定索引的主键值
+     *
      * @param index 索引
      * @return 主键值
      */
@@ -203,8 +212,9 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     /**
      * 批量查询元素
+     *
      * @param fromIndex 开始索引
-     * @param toIndex 结束索引
+     * @param toIndex   结束索引
      * @return 元素集合
      */
     @Override
@@ -214,11 +224,12 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     /**
      * 创建分组表
-     * @param newTableName 新表名
+     *
+     * @param newTableName   新表名
      * @param groupByColumns 分组列
-     * @param whereClause 条件
-     * @param keyColumn 主键列
-     * @param resultColumns 结果列
+     * @param whereClause    条件
+     * @param keyColumn      主键列
+     * @param resultColumns  结果列
      * @return 创建成功与否
      */
     @Override
@@ -228,10 +239,11 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     /**
      * 插入分组数据
-     * @param sourceTableName 源表名
-     * @param targetTableName 目标表名
-     * @param groupByColumns 分组列
-     * @param whereClause 条件
+     *
+     * @param sourceTableName  源表名
+     * @param targetTableName  目标表名
+     * @param groupByColumns   分组列
+     * @param whereClause      条件
      * @param columnForMapList 列映射定义
      * @return 插入成功与否
      */
@@ -242,8 +254,9 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     /**
      * 根据主键获取元素
+     *
      * @param keyColumn 主键列
-     * @param keyValue 主键值
+     * @param keyValue  主键值
      * @return 元素
      */
     @Override
@@ -267,8 +280,9 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     /**
      * 根据主键移除元素
+     *
      * @param keyColumn 主键列
-     * @param keyValue 主键值
+     * @param keyValue  主键值
      * @return 移除成功与否
      */
     @Override
@@ -278,6 +292,7 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     /**
      * 获取所有主键值
+     *
      * @param keyColumn 主键列
      * @return 主键值集合
      */

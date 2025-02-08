@@ -161,7 +161,7 @@ public class DBUtil {
      * @param pkColumnName 主键列名
      * @param dataSource   数据源
      * @param clazz        数据类型
-     * @param removeFlag
+     * @param removeFlag   用于判断是否对集合操作过移除，如果没有操作过移除，那就可以用下标+1作为id来进行查询
      * @return 数据
      */
     public static <T> T get(int index, String tableName, List<LocalColumn> columns, String pkColumnName, DataSource dataSource, Class<T> clazz, boolean removeFlag) {
@@ -393,7 +393,7 @@ public class DBUtil {
         return DBUtil.querySingle(dataSource, sql.toString(), Lists.newArrayList(new LocalColumn("count", Integer.class, "INT", null)), Integer.class);
     }
 
-
+    // 用于标记drop的表的数量，主要用于单元测试，测试表的自动删除
     public static final AtomicInteger dropTableCounter = new AtomicInteger(0);
 
     /**
