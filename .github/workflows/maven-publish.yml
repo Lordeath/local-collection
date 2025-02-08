@@ -11,6 +11,7 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    environment: publish  # **指定使用 publish 环境，否则 secrets 读取不到**
     permissions:
       contents: read
       packages: write
