@@ -26,6 +26,10 @@ jobs:
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 
+    - name: setup-gpg
+      uses: olafurpg/setup-gpg@v3
+          
+
     - name: maven-settings-action 设置maven所需的账号密码
       uses: s4u/maven-settings-action@v3.1.0
       with:
@@ -37,13 +41,6 @@ jobs:
     - name: Build with Maven 编译
       run: mvn -B package --file pom.xml
       
-    - name: Import GPG
-      uses: crazy-max/ghaction-import-gpg@v6.2.0
-      with:
-        # Passphrase of the GPG private key
-        passphrase: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
-
-    
     - name: Publish to GitHub Packages Apache Maven 发布
       run: mvn deploy -s $GITHUB_WORKSPACE/settings.xml -D gpg.passphrase=${{ secrets.MAVEN_GPG_PASSPHRASE }}
       env:
