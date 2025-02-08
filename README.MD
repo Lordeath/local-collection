@@ -15,7 +15,7 @@
 
 
 
-集成方式，以h2举例：
+集成方式，以sqlite举例：
 ```xml
 <dependency>
     <groupId>io.github.lordeath</groupId>
@@ -25,7 +25,8 @@
 ```
 
 ```java
-// 全局设置一遍即可
+// 全局设置一遍即可（默认是sqlite不需要设置，在用h2的时候才设置）
+// 这一块可能是过度设计，用户不需要关心内部实现是sqlite还是h2
 System.setProperty(CONST_DB_ENGINE, "sqlite");
 
 // 使用时要记得关闭，否则数据会残留在磁盘上
