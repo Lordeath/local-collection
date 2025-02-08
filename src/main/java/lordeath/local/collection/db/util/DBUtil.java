@@ -393,7 +393,9 @@ public class DBUtil {
         return DBUtil.querySingle(dataSource, sql.toString(), Lists.newArrayList(new LocalColumn("count", Integer.class, "INT", null)), Integer.class);
     }
 
-    // 用于标记drop的表的数量，主要用于单元测试，测试表的自动删除
+    /**
+     * 用于标记drop的表的数量，主要用于单元测试，测试表的自动删除
+     */
     public static final AtomicInteger dropTableCounter = new AtomicInteger(0);
 
     /**
