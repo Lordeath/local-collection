@@ -28,7 +28,7 @@ jobs:
     - name: maven-settings-action 设置maven所需的账号密码
       uses: s4u/maven-settings-action@v3.1.0
       with:
-        servers: '[{"id": "central", "username": env.USERNAME, "password": env.PASSWORD},{"id": "ossrh", "username": env.USERNAME, "password": env.PASSWORD}]'
+        servers: '[{"id": "central", "username": "${{ env.USERNAME }}", "password": "${{ env.PASSWORD }}"},{"id": "ossrh", "username": "${{ env.USERNAME }}", "password": "${{ env.PASSWORD }}"}]'
       env:
         USERNAME: ${{ publish.USERNAME }}
         PASSWORD: ${{ publish.PASSWORD }}
