@@ -13,6 +13,7 @@ import java.util.*;
 
 /**
  * 本地Map实现，基于数据库存储
+ *
  * @param <K> 键类型
  * @param <V> 值类型
  */
@@ -24,7 +25,7 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
 
     /**
      * 构造一个新的LocalMap实例。
-     * 
+     * <p>
      * 该构造函数初始化一个带有随机生成键列的新LocalMap实例。
      * 它还创建一个新的LocalList实例来存储映射的值。
      */
@@ -63,10 +64,10 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
         return innerList.getDatabaseOpt().getByKey(keyColumn, key);
     }
 
+    @SuppressWarnings({"resource", "unchecked"})
     @Override
     public V put(K key, V value) {
         if (innerList.getDatabaseOpt() == null) {
-//            innerList.init((Class<V>) value.getClass());
             Class<?> resultClass = value.getClass();
             String newTableName = "map_" + UUID.randomUUID().toString().replace("-", "");
 
@@ -75,7 +76,6 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
             {
                 LocalColumnForMap localColumnForMap = new LocalColumnForMap();
                 localColumnForMap.setKey(true);
-//                localColumnForMap.setExpression(String.join(" || '.' || ", groupByColumns) + " AS " + keyColumn);
                 localColumnForMap.setExpression(keyColumn);
                 localColumnForMap.setSinkColumn(new LocalColumn(keyColumn, key.getClass(), DBUtil.getSqlType(key.getClass()), null));
                 columnForMapList.add(localColumnForMap);
@@ -172,8 +172,9 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
 
     /**
      * 创建MapBuilder实例
+     *
      * @param source 源数据列表
-     * @param <T> 数据类型
+     * @param <T>    数据类型
      * @return MapBuilder实例
      */
     public static <T> MapBuilder<T> from(LocalList<T> source) {
@@ -182,6 +183,7 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
 
     /**
      * Map构建器类
+     *
      * @param <T> 数据类型
      */
     public static class MapBuilder<T> {
@@ -200,6 +202,7 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
 
         /**
          * 设置分组字段
+         *
          * @param columns 分组字段列表
          * @return 当前构建器实例
          */
@@ -210,6 +213,7 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
 
         /**
          * 设置过滤条件
+         *
          * @param whereClause 过滤条件
          * @return 当前构建器实例
          */
@@ -220,6 +224,7 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
 
         /**
          * 设置选择字段
+         *
          * @param columns 选择字段列表
          * @return 当前构建器实例
          */
@@ -230,6 +235,7 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
 
         /**
          * 设置结果类型
+         *
          * @param resultClass 结果类型
          * @return 当前构建器实例
          */
@@ -240,6 +246,7 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
 
         /**
          * 设置键字段
+         *
          * @param keyField 键字段
          * @return 当前构建器实例
          */
@@ -250,6 +257,7 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
 
         /**
          * 构建LocalMap实例
+         *
          * @param <K> 键类型
          * @param <V> 值类型
          * @return LocalMap实例

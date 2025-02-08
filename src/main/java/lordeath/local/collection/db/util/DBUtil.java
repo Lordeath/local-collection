@@ -1,7 +1,6 @@
 package lordeath.local.collection.db.util;
 
 import com.google.common.collect.Lists;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lordeath.local.collection.db.bean.LocalColumn;
 import lordeath.local.collection.db.bean.LocalColumnForMap;
@@ -38,9 +37,7 @@ public class DBUtil {
         }
         sql.setLength(sql.length() - 2);
         sql.append(") VALUES (");
-        for (int i = 0; i < columns.size(); i++) {
-            sql.append("?, ");
-        }
+        sql.append("?, ".repeat(columns.size()));
         sql.setLength(sql.length() - 2);
         sql.append(")");
         log.debug("插入数据的sql: {}", sql);
@@ -85,9 +82,7 @@ public class DBUtil {
         }
         sql.setLength(sql.length() - 2);
         sql.append(") VALUES (");
-        for (int i = 0; i < columns.size(); i++) {
-            sql.append("?, ");
-        }
+        sql.append("?, ".repeat(columns.size()));
         sql.setLength(sql.length() - 2);
         sql.append(")");
         log.debug("批量插入数据的sql: {}", sql);
@@ -138,7 +133,7 @@ public class DBUtil {
             return null;
         }
         // 获取主键值
-        Long pk = pk(index, tableName, pkColumnName, dataSource);
+        long pk = pk(index, tableName, pkColumnName, dataSource);
         // 删除数据
         String sql = "DELETE FROM " + tableName + " WHERE " + pkColumnName + " = ?";
         try (Connection connection = dataSource.getConnection();
@@ -165,25 +160,23 @@ public class DBUtil {
      * @return 数据
      */
     public static <T> T get(int index, String tableName, List<LocalColumn> columns, String pkColumnName, DataSource dataSource, Class<T> clazz, boolean removeFlag) {
+        StringBuilder sql = new StringBuilder("select * from ")
+                .append(tableName);
         if (removeFlag || pkColumnName == null) {
             // 通过主键进行排序，然后查询，limit offset 1
             // 拼接sql
-            StringBuilder sql = new StringBuilder("select * from ")
-                    .append(tableName);
             if (pkColumnName != null) {
                 sql.append(" order by ").append(pkColumnName);
             }
             sql.append(" limit 1 offset ").append(index);
-            log.debug("查询数据的sql: {}", sql);
-            return DBUtil.querySingle(dataSource, sql.toString(), columns, clazz);
+            log.debug("removeFlag查询数据的sql: {}", sql);
         } else {
             // 如果主键没有修改过，也就是说没有被移除过，那说明get是可以直接用index来作为pk的
             // 注意下标要加1，因为下标从0开始，而自增从1开始
-            StringBuilder sql = new StringBuilder("select * from ").append(tableName);
             sql.append(" where ").append(pkColumnName).append(" = ").append(index + 1);
             log.debug("查询数据的sql: {}", sql);
-            return DBUtil.querySingle(dataSource, sql.toString(), columns, clazz);
         }
+        return DBUtil.querySingle(dataSource, sql.toString(), columns, clazz);
     }
 
     /**
@@ -242,6 +235,7 @@ public class DBUtil {
      * @param sql        sql
      * @return 执行结果
      */
+    @SuppressWarnings("UnusedReturnValue")
     public static boolean executeSql(DataSource dataSource, String sql) {
         try (Connection connection = dataSource.getConnection();
              Statement statement = connection.createStatement()) {
@@ -262,6 +256,7 @@ public class DBUtil {
      * @param <T>        数据类型
      * @return 数据
      */
+    @SuppressWarnings("unchecked")
     public static <T> T querySingle(DataSource dataSource, String sql, List<LocalColumn> columns, Class<T> clazz) {
         // 通过数据源进行查询，返回一个对象
         try (Connection connection = dataSource.getConnection();
@@ -358,11 +353,8 @@ public class DBUtil {
                 return null;
             }
 
-        } catch (SQLException | InstantiationException | IllegalAccessException e) {
-            throw new RuntimeException(e);
-        } catch (InvocationTargetException e) {
-            throw new RuntimeException(e);
-        } catch (NoSuchMethodException e) {
+        } catch (SQLException | InstantiationException | IllegalAccessException | InvocationTargetException |
+                 NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
     }
@@ -442,7 +434,7 @@ public class DBUtil {
      */
     public static <T> T set(int index, T element, String tableName, List<LocalColumn> columns, String pkColumnName, DataSource dataSource) {
         // 获取主键值
-        Long pk = pk(index, tableName, pkColumnName, dataSource);
+        long pk = pk(index, tableName, pkColumnName, dataSource);
 
         // 更新数据
         StringBuilder sql = new StringBuilder("UPDATE ").append(tableName).append(" SET ");
@@ -508,6 +500,7 @@ public class DBUtil {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private static <T> T createInstance(ResultSet rs, List<LocalColumn> columns, Class<T> clazz)
             throws Exception {
         if (columns.size() == 2 && columns.get(1).getField() == null && columns.get(0).getColumnName().startsWith("key_")) {
@@ -755,6 +748,7 @@ public class DBUtil {
      * @param keyColumn  键列的名称
      * @return 是否添加成功
      */
+    @SuppressWarnings("UnusedReturnValue")
     public static <K, V> boolean addByKey(K key, V obj, String tableName, List<LocalColumn> columns, DataSource dataSource, String keyColumn) {
         StringBuilder sql = new StringBuilder("INSERT INTO ").append(tableName).append(" (");
         for (LocalColumn column : columns) {
@@ -762,12 +756,10 @@ public class DBUtil {
         }
         sql.setLength(sql.length() - 2);
         sql.append(") VALUES (");
-        for (int i = 0; i < columns.size(); i++) {
-            sql.append("?, ");
-        }
+        sql.append("?, ".repeat(columns.size()));
         sql.setLength(sql.length() - 2);
         sql.append(")");
-        log.debug("插入数据的sql: {}", sql);
+        log.debug("addByKey插入数据的sql: {}", sql);
 
         try (Connection connection = dataSource.getConnection();
              PreparedStatement stmt = connection.prepareStatement(sql.toString())) {

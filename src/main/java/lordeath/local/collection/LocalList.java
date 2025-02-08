@@ -126,6 +126,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      *
      * @throws Throwable 可能抛出异常
      */
+    @SuppressWarnings("removal")
     @Override
     protected void finalize() throws Throwable {
         close();
@@ -245,7 +246,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * @param c 集合
      * @return 添加成功返回true，否则返回false
      */
-    @SuppressWarnings("NullableProblems")
+    @SuppressWarnings({"NullableProblems", "unchecked"})
     @Override
     public boolean addAll(Collection<? extends T> c) {
         if (databaseOpt == null && c != null && !c.isEmpty()) {
@@ -411,6 +412,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * @param toIndex   结束索引（不包含）
      * @return 包含指定范围元素的新ArrayList
      */
+    @SuppressWarnings("NullableProblems")
     @Override
     public List<T> subList(int fromIndex, int toIndex) {
         if (fromIndex < 0)
