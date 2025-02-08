@@ -448,7 +448,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * @param value    对象值
      * @return 被更新或添加的对象
      */
-    public T putByKey(String keyColumn, String key, T value) {
+    T putByKey(String keyColumn, String key, T value) {
         AtomicBoolean removed = new AtomicBoolean(false);
         T t = databaseOpt.putByKey(keyColumn, key, value, removed);
         if (!removed.get()) {
@@ -464,7 +464,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * @param keyColumn 键列名
      * @param key      键值
      */
-    public void removeByKey(String keyColumn, Object key) {
+    void removeByKey(String keyColumn, Object key) {
         boolean b = databaseOpt.removeByKey(keyColumn, key);
         if (b) {
             sizeCounter.decrementAndGet();
@@ -480,7 +480,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * @param whereClause     where条件
      * @param columnForMapList 列映射
      */
-    public void insertGroupedData(String tableName, String newTableName, List<String> groupByColumns, String whereClause, List<LocalColumnForMap> columnForMapList) {
+    void insertGroupedData(String tableName, String newTableName, List<String> groupByColumns, String whereClause, List<LocalColumnForMap> columnForMapList) {
         databaseOpt.insertGroupedData(tableName, newTableName, groupByColumns, whereClause, columnForMapList);
         // 刷新计数器
         sizeCounter.set(databaseOpt.size());
