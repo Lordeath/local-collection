@@ -34,7 +34,7 @@ jobs:
     #     gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
     #     passphrase: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
     - name: Import GPG Key
-      run: echo "${{ secrets.GPG_PRIVATE_KEY }}" | base64 --decode | gpg --batch --import
+      run: echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
 
     - name: maven-settings-action 设置maven所需的账号密码
       uses: s4u/maven-settings-action@v3.1.0
