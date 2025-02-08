@@ -32,7 +32,7 @@ jobs:
     - name: maven-settings-action 设置maven所需的账号密码
       uses: s4u/maven-settings-action@v3.1.0
       with:
-        path: ${{ github.workspace }}
+        path: ${{ github.workspace }}/custom_settings.xml
         servers: |
           [
             {
@@ -46,7 +46,7 @@ jobs:
       run: mvn -B package --file pom.xml
       
     - name: Publish to GitHub Packages Apache Maven 发布
-      run: mvn deploy -s $GITHUB_WORKSPACE/settings.xml -X -Dgpg.passphrase="${{ secrets.MAVEN_GPG_PASSPHRASE }}"
+      run: mvn deploy -s ${{ github.workspace }}/custom_settings.xml -X -Dgpg.passphrase="${{ secrets.MAVEN_GPG_PASSPHRASE }}"
       env:
         GITHUB_TOKEN: ${{ github.token }}
  
