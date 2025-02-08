@@ -32,6 +32,7 @@ jobs:
     - name: maven-settings-action 设置maven所需的账号密码
       uses: s4u/maven-settings-action@v3.1.0
       with:
+        path: $GITHUB_WORKSPACE/settings.xml
         servers: '[{"id": "central", "username": "${{ env.USERNAME }}", "password": "${{ env.PASSWORD }}"},{"id": "ossrh", "username": "${{ env.USERNAME }}", "password": "${{ env.PASSWORD }}"}]'
       env:
         USERNAME: ${{ secrets.USERNAME }}
