@@ -1,6 +1,6 @@
-我想做一个本地缓存，用作替代ArrayList或者HashMap，使用本地的硬盘上的缓存来降低内存的要求
+一个本地缓存，用作替代ArrayList或者HashMap，使用本地的硬盘上的缓存来降低内存的要求
 
-基本思路是使用H2或者SQLite等本地数据库，优先使用H2，之后也会考虑集成其他的数据库引擎
+基本思路是使用H2或者SQLite等本地数据库，优先使用SQLite，之后也会考虑集成其他的数据库引擎
 
 已经完成了一些基础的操作，操作方法详见[H2Test](src/test/java/lordeath/local/collection/test/H2Test.java)
 
