@@ -65,6 +65,7 @@ public class LocalListTest {
             list.remove(2);
 
             list.set(1, "bb");
+            assertEquals("a", list.get(0));
             assertEquals("bb", list.get(1));
 
 

@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lordeath.local.collection.db.bean.LocalColumn;
 import lordeath.local.collection.db.bean.LocalColumnForMap;
+import lordeath.local.collection.db.config.MainConfig;
 import lordeath.local.collection.db.opt.impl.DatabaseFactory;
 import lordeath.local.collection.db.opt.inter.IDatabaseOpt;
 import lordeath.local.collection.db.util.DBUtil;
@@ -33,6 +34,9 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     List<LocalColumn> columns;
 
+    final int cacheSize;
+    final ArrayList<T> cache;
+
     /**
      * 删除标志
      */
@@ -58,6 +62,8 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     public LocalList() {
         databaseOpt = null;
+        cacheSize = MainConfig.CACHE_SIZE.getPropertyInt();
+        cache = new ArrayList<>(cacheSize);
     }
 
     /**
@@ -67,6 +73,8 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     public LocalList(Class<T> clazz) {
         init(clazz);
+        cacheSize = MainConfig.CACHE_SIZE.getPropertyInt();
+        cache = new ArrayList<>(cacheSize);
     }
 
     /**
@@ -83,6 +91,8 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         this.databaseOpt = DatabaseFactory.createDatabaseOptForMap(clazz, tableName, columnsForMap);
         DataSource dataSource = databaseOpt.getDataSource();
         cleanable = cleaner.register(this, () -> DBUtil.drop(tableName, dataSource));
+        cacheSize = MainConfig.CACHE_SIZE.getPropertyInt();
+        cache = new ArrayList<>(cacheSize);
     }
 
     /**
@@ -103,6 +113,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     @Override
     public void close() {
         try {
+            restoreCacheToDB();
             Optional.ofNullable(databaseOpt).ifPresent(IDatabaseOpt::close);
         } catch (Throwable ignored) {
         }
@@ -127,6 +138,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     @Override
     public int size() {
+        restoreCacheToDB();
         return sizeCounter.get();
     }
 
@@ -137,6 +149,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     @Override
     public boolean isEmpty() {
+        restoreCacheToDB();
         return size() == 0;
     }
 
@@ -159,6 +172,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     @SuppressWarnings("NullableProblems")
     @Override
     public Iterator<T> iterator() {
+        restoreCacheToDB();
         return new LocalListIterator();
     }
 
@@ -197,7 +211,17 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         if (databaseOpt == null) {
             init((Class<T>) t.getClass());
         }
-        boolean b = databaseOpt.add(t);
+        if (cacheSize <= 0) {
+            boolean b = databaseOpt.add(t);
+            if (b) {
+                sizeCounter.incrementAndGet();
+            }
+            return b;
+        }
+        if (cache.size() >= cacheSize) {
+            restoreCacheToDB();
+        }
+        boolean b = cache.add(t);
         if (b) {
             sizeCounter.incrementAndGet();
         }
@@ -243,7 +267,21 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         if (databaseOpt == null) {
             throw new RuntimeException("数据源操作初始化失败");
         }
-        boolean b = databaseOpt.addAll(c);
+
+        if (cacheSize <= 0) {
+            boolean b = databaseOpt.addAll(c);
+            if (b) {
+                sizeCounter.addAndGet(c.size());
+            }
+            return b;
+        }
+        if (cache.size() >= cacheSize) {
+            restoreCacheToDB();
+        }
+        boolean b = cache.addAll(c);
+        if (cache.size() >= cacheSize) {
+            restoreCacheToDB();
+        }
         if (b) {
             sizeCounter.addAndGet(c.size());
         }
@@ -292,6 +330,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     @Override
     public void clear() {
+        cache.clear();
         databaseOpt.clear();
         sizeCounter.set(0);
     }
@@ -304,6 +343,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     @Override
     public T get(int index) {
+        restoreCacheToDB();
         return databaseOpt.get(index, removeFlag.get());
     }
 
@@ -316,6 +356,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     @Override
     public T set(int index, T element) {
+        restoreCacheToDB();
         return databaseOpt.set(index, element);
     }
 
@@ -338,6 +379,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     @Override
     public T remove(int index) {
+        restoreCacheToDB();
         removeFlag.set(true);
         T t = databaseOpt.remove(index);
         if (t != null) {
@@ -423,6 +465,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * @return 主键的长整型值
      */
     public long pk(int index) {
+        restoreCacheToDB();
         if (!removeFlag.get()) {
             return index + 1;
         }
@@ -438,6 +481,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * @return 被更新或添加的对象
      */
     T putByKey(String keyColumn, String key, T value) {
+        restoreCacheToDB();
         AtomicBoolean removed = new AtomicBoolean(false);
         T t = databaseOpt.putByKey(keyColumn, key, value, removed);
         if (!removed.get()) {
@@ -454,6 +498,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * @param key      键值
      */
     void removeByKey(String keyColumn, Object key) {
+        restoreCacheToDB();
         boolean b = databaseOpt.removeByKey(keyColumn, key);
         if (b) {
             sizeCounter.decrementAndGet();
@@ -470,9 +515,18 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * @param columnForMapList 列映射
      */
     void insertGroupedData(String tableName, String newTableName, List<String> groupByColumns, String whereClause, List<LocalColumnForMap> columnForMapList) {
+        restoreCacheToDB();
         databaseOpt.insertGroupedData(tableName, newTableName, groupByColumns, whereClause, columnForMapList);
         // 刷新计数器
         sizeCounter.set(databaseOpt.size());
+    }
+
+    private void restoreCacheToDB() {
+        if (cache.isEmpty()) {
+            return;
+        }
+        databaseOpt.addAll(cache);
+        cache.clear();
     }
 
     /**
@@ -525,7 +579,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         @Override
         public T next() {
             if (!hasNext())
-                throw new java.util.NoSuchElementException();
+                throw new NoSuchElementException();
             lastRet = cursor;
             return get(cursor++);
         }
@@ -548,7 +602,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         @Override
         public T previous() {
             if (!hasPrevious())
-                throw new java.util.NoSuchElementException();
+                throw new NoSuchElementException();
             lastRet = --cursor;
             return get(cursor);
         }
@@ -587,7 +641,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
                     cursor--;
                 lastRet = -1;
             } catch (IndexOutOfBoundsException e) {
-                throw new java.util.ConcurrentModificationException();
+                throw new ConcurrentModificationException();
             }
         }
 
@@ -604,7 +658,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
             try {
                 LocalList.this.set(lastRet, t);
             } catch (IndexOutOfBoundsException e) {
-                throw new java.util.ConcurrentModificationException();
+                throw new ConcurrentModificationException();
             }
         }
 
@@ -619,7 +673,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
                 LocalList.this.add(cursor++, t);
                 lastRet = -1;
             } catch (IndexOutOfBoundsException e) {
-                throw new java.util.ConcurrentModificationException();
+                throw new ConcurrentModificationException();
             }
         }
     }

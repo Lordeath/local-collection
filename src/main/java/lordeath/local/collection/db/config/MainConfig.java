@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 public enum MainConfig {
     /** 数据库引擎类型配置键 */
     DB_ENGINE("lordeath.local.collection.db.engine", "sqlite"),
+    CACHE_SIZE("lordeath.local.collection.cache.size", 1000 + ""),
     ;
 
     private final String key;
@@ -18,6 +19,10 @@ public enum MainConfig {
 
     public String getProperty() {
         return System.getProperty(key, defaultValue);
+    }
+
+    public int getPropertyInt() {
+        return Integer.parseInt(System.getProperty(key, defaultValue));
     }
 
     public String setProperty(String value) {
