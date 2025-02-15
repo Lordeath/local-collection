@@ -269,12 +269,14 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         }
 
         if (cacheSize <= 0) {
-            boolean b = databaseOpt.addAll(c);
-            if (b) {
-                sizeCounter.addAndGet(c.size());
-            }
-            return b;
+            return addAllLocally(c);
         }
+        if (c.size() >= cacheSize) {
+            // 如果传入的列表大于缓存上限，直接不使用缓存
+            restoreCacheToDB();
+            return addAllLocally(c);
+        }
+
         if (cache.size() >= cacheSize) {
             restoreCacheToDB();
         }
@@ -282,6 +284,14 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         if (cache.size() >= cacheSize) {
             restoreCacheToDB();
         }
+        if (b) {
+            sizeCounter.addAndGet(c.size());
+        }
+        return b;
+    }
+
+    private boolean addAllLocally(Collection<? extends T> c) {
+        boolean b = databaseOpt.addAll(c);
         if (b) {
             sizeCounter.addAndGet(c.size());
         }
