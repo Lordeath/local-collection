@@ -1,6 +1,7 @@
 package lordeath.local.collection.test;
 
 import lordeath.local.collection.LocalList;
+import lordeath.local.collection.db.config.MainConfig;
 import lordeath.local.collection.db.util.DBUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -8,9 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
-import static lordeath.local.collection.db.config.MainConfig.CONST_DB_ENGINE;
 import static lordeath.local.collection.test.LocalListTest.testCases;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -19,7 +18,7 @@ public class SqliteTest {
 
     @BeforeAll
     public static void before() {
-        System.setProperty(CONST_DB_ENGINE, "sqlite");
+        MainConfig.DB_ENGINE.setProperty("sqlite");
         Thread.currentThread().setName("sqlite");
     }
 

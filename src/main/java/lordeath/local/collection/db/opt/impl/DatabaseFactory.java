@@ -1,20 +1,34 @@
-package lordeath.local.collection.db.opt.factory;
+package lordeath.local.collection.db.opt.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import lordeath.local.collection.db.bean.LocalColumnForMap;
-import lordeath.local.collection.db.opt.impl.H2Opt;
-import lordeath.local.collection.db.opt.impl.SqliteOpt;
+import lordeath.local.collection.db.config.MainConfig;
 import lordeath.local.collection.db.opt.inter.IDatabaseOpt;
 
 import java.util.List;
 
-import static lordeath.local.collection.db.config.MainConfig.CONST_DB_ENGINE;
 
 /**
  * 数据库操作对象工厂
  */
 @Slf4j
 public class DatabaseFactory {
+
+    public static <T> IDatabaseOpt<T> createDatabaseOptForList(Class<T> clazz) {
+        // 这里可以根据配置或者其他条件选择不同的数据库实现
+        // 目前默认使用H2数据库
+        String dbEngine = MainConfig.DB_ENGINE.getProperty();
+        IDatabaseOpt<T> databaseOpt;
+        if (dbEngine == null || "sqlite".equalsIgnoreCase(dbEngine)) {
+            // 默认的改成sqlite，因为sqlite的内存降低是最明显的
+            databaseOpt = new SqliteOpt<>(clazz);
+        } else if ("h2".equalsIgnoreCase(dbEngine)) {
+            databaseOpt = new H2Opt<>(clazz);
+        } else {
+            throw new IllegalArgumentException("其他的数据库暂时不支持: " + dbEngine);
+        }
+        return databaseOpt;
+    }
     
     /**
      * 创建数据库操作对象
@@ -24,10 +38,10 @@ public class DatabaseFactory {
      * @return 数据库操作对象
      * @param <T> 元素类型
      */
-    public static <T> IDatabaseOpt<T> createDatabaseOpt(Class<T> clazz, String tableName, List<LocalColumnForMap> columnsForMap) {
+    public static <T> IDatabaseOpt<T> createDatabaseOptForMap(Class<T> clazz, String tableName, List<LocalColumnForMap> columnsForMap) {
         // 这里可以根据配置或者其他条件选择不同的数据库实现
         // 目前默认使用H2数据库
-        String dbEngine = System.getProperty(CONST_DB_ENGINE);
+        String dbEngine = MainConfig.DB_ENGINE.getProperty();
         IDatabaseOpt<T> databaseOpt;
         if (dbEngine == null || "h2".equalsIgnoreCase(dbEngine)) {
             databaseOpt = new H2Opt<>(clazz, tableName, columnsForMap);

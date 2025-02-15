@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
  * @param <T> 数据类型
  */
 @Slf4j
-public class SqliteOpt<T> implements IDatabaseOpt<T> {
+class SqliteOpt<T> implements IDatabaseOpt<T> {
 
     /**
      * 数据源
@@ -55,7 +55,7 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
      *
      * @param clazz 元素类型
      */
-    public SqliteOpt(Class<T> clazz) {
+    SqliteOpt(Class<T> clazz) {
         this.clazz = clazz;
         dataSource = SqliteConfig.getDataSource();
         tableName = "tmp_" + UUID.randomUUID().toString().replace("-", "");
@@ -85,7 +85,7 @@ public class SqliteOpt<T> implements IDatabaseOpt<T> {
      * @param tableName     表名
      * @param columnsForMap 列映射定义
      */
-    public SqliteOpt(Class<T> clazz, String tableName, List<LocalColumnForMap> columnsForMap) {
+    SqliteOpt(Class<T> clazz, String tableName, List<LocalColumnForMap> columnsForMap) {
         this.clazz = clazz;
         this.tableName = tableName;
         this.columns = columnsForMap.stream().map(LocalColumnForMap::getSinkColumn).collect(Collectors.toList());

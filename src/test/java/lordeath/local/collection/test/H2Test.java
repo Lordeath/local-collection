@@ -1,17 +1,17 @@
 package lordeath.local.collection.test;
 
+import lordeath.local.collection.db.config.MainConfig;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import static lordeath.local.collection.db.config.MainConfig.CONST_DB_ENGINE;
 import static lordeath.local.collection.test.LocalListTest.testCases;
 
 public class H2Test {
 
     @BeforeAll
     public static void before() {
-        System.setProperty(CONST_DB_ENGINE, "h2");
+        MainConfig.DB_ENGINE.setProperty("h2");
         Thread.currentThread().setName("h2");
     }
 

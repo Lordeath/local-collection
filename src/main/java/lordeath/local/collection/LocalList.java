@@ -4,9 +4,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lordeath.local.collection.db.bean.LocalColumn;
 import lordeath.local.collection.db.bean.LocalColumnForMap;
-import lordeath.local.collection.db.opt.factory.DatabaseFactory;
-import lordeath.local.collection.db.opt.impl.H2Opt;
-import lordeath.local.collection.db.opt.impl.SqliteOpt;
+import lordeath.local.collection.db.opt.impl.DatabaseFactory;
 import lordeath.local.collection.db.opt.inter.IDatabaseOpt;
 import lordeath.local.collection.db.util.DBUtil;
 
@@ -16,8 +14,6 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-
-import static lordeath.local.collection.db.config.MainConfig.CONST_DB_ENGINE;
 
 /**
  * 参考的是ArrayList，但是实现方式是H2数据库或者其他数据库
@@ -84,7 +80,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         this.columns = columnsForMap.stream().map(LocalColumnForMap::getSinkColumn).collect(Collectors.toList());
 
         // 创建数据库操作对象
-        this.databaseOpt = DatabaseFactory.createDatabaseOpt(clazz, tableName, columnsForMap);
+        this.databaseOpt = DatabaseFactory.createDatabaseOptForMap(clazz, tableName, columnsForMap);
         DataSource dataSource = databaseOpt.getDataSource();
         cleanable = cleaner.register(this, () -> DBUtil.drop(tableName, dataSource));
     }
@@ -95,16 +91,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * @param clazz 元素类型
      */
     void init(Class<T> clazz) {
-        String dbEngine = System.getProperty(CONST_DB_ENGINE);
-        if (dbEngine == null || "sqlite".equalsIgnoreCase(dbEngine)) {
-            // 默认的改成sqlite，因为sqlite的内存降低是最明显的
-            databaseOpt = new SqliteOpt<>(clazz);
-        } else if ("h2".equalsIgnoreCase(dbEngine)) {
-            databaseOpt = new H2Opt<>(clazz);
-        } else {
-            throw new IllegalArgumentException("其他的数据库暂时不支持: " + dbEngine);
-        }
-
+        databaseOpt = DatabaseFactory.createDatabaseOptForList(clazz);
         String tableName = databaseOpt.getTableName();
         DataSource dataSource = databaseOpt.getDataSource();
         cleanable = cleaner.register(this, () -> DBUtil.drop(tableName, dataSource));
