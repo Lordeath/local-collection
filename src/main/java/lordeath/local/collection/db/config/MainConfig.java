@@ -19,6 +19,10 @@ public enum MainConfig {
      */
     DB_ENGINE_INIT_DELETE("lordeath.local.collection.db.init.delete", "true"),
     /**
+     * spring.application.name, 用于数据文件的存放位置，防止多个app使用时文件名冲突造成的文件误删
+     */
+    DB_ENGINE_APP_NAME("spring.application.name", "unknow_app_name"),
+    /**
      * 写入缓存的触发写入的阈值，默认为1000
      */
     CACHE_SIZE("lordeath.local.collection.cache.size", 1000 + ""),

@@ -7,7 +7,6 @@ import org.apache.commons.lang3.StringUtils;
 import javax.sql.DataSource;
 import java.io.File;
 import java.io.IOException;
-import java.time.LocalDate;
 
 /**
  * SQLite数据库配置类
@@ -20,7 +19,7 @@ public class SqliteConfig {
     /**
      * SQLite数据库默认文件路径
      */
-    public static final String DEFAULT_SQLITE_FILE_PATH = "./local_collection/sqlite/fxm_local_collection_";
+    public static final String DEFAULT_SQLITE_FILE_PATH = "./local_collection/sqlite/fxm_local_collection";
     /**
      * SQLite数据库用户名配置键
      */
@@ -47,16 +46,25 @@ public class SqliteConfig {
     /**
      * 初始化SQLite数据库数据源
      */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     private static synchronized void init() {
         String filePath = System.getProperty(CONST_SQLITE_FILE_PATH);
         if (StringUtils.isBlank(filePath)) {
             // 再加上年月日，用于自动清理过期的文件
             // 使用年月日时分秒的格式
-            String date = LocalDate.now().toString();
-            date = StringUtils.replace(date, ":", "_");
-            date = StringUtils.replace(date, "-", "_");
-            filePath = DEFAULT_SQLITE_FILE_PATH + date + ".sqlite";
+//            String date = LocalDate.now().toString();
+//            date = StringUtils.replace(date, ":", "_");
+//            date = StringUtils.replace(date, "-", "_");
+//            filePath = DEFAULT_SQLITE_FILE_PATH + date + ".sqlite";
+            filePath = DEFAULT_SQLITE_FILE_PATH + ".sqlite";
+
+            // 判断是否存在 app 名称
+            String appName = MainConfig.DB_ENGINE_APP_NAME.getProperty();
+            // 原有的路径上，增加一级
+            File fileWithAppName = new File(new File(filePath).getParent(), appName);
+            filePath = new File(fileWithAppName, new File(filePath).getName()).getAbsolutePath();
         }
+
         try {
             FileUtils.forceMkdirParent(new File(filePath));
         } catch (IOException e) {
