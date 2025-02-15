@@ -71,8 +71,8 @@ public final class H2Config {
         hikariDataSource.setUsername(username);
         hikariDataSource.setPassword(password);
         dataSource = hikariDataSource;
-        File file = new File(filePath);
-        file.deleteOnExit();
+        // File file = new File(filePath);
+        // file.deleteOnExit();
     }
 
 }
