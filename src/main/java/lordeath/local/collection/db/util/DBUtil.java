@@ -404,7 +404,7 @@ public class DBUtil {
     public static void drop(String tableName, DataSource dataSource) {
         // 删除表的数据
         StringBuilder sql = new StringBuilder("drop table ").append(tableName);
-        log.warn("删除表的sql: {}", sql);
+        log.info("删除表的sql: {}", sql);
         DBUtil.executeSql(dataSource, sql.toString());
         dropTableCounter.incrementAndGet();
     }
