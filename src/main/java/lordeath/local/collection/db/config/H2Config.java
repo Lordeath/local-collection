@@ -5,7 +5,6 @@ import org.apache.commons.lang3.StringUtils;
 
 import javax.sql.DataSource;
 import java.io.File;
-import java.time.LocalDate;
 
 /**
  * H2数据库配置类
@@ -18,7 +17,7 @@ public final class H2Config {
     /**
      * H2数据库默认文件路径
      */
-    public static final String DEFAULT_H2_FILE_PATH = "./local_collection/h2/fxm_local_collection_";
+    public static final String DEFAULT_H2_FILE_PATH = "./local_collection/h2/fxm_local_collection";
     /**
      * H2数据库用户名配置键
      */
@@ -45,15 +44,17 @@ public final class H2Config {
     /**
      * 初始化H2数据库数据源
      */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     private static synchronized void init() {
         String filePath = System.getProperty(CONST_H2_FILE_PATH);
         if (StringUtils.isBlank(filePath)) {
-            // 再加上年月日，用于自动清理过期的文件
-            // 使用年月日时分秒的格式
-            String date = LocalDate.now().toString();
-            date = StringUtils.replace(date, ":", "_");
-            date = StringUtils.replace(date, "-", "_");
-            filePath = DEFAULT_H2_FILE_PATH + date;
+            filePath = DEFAULT_H2_FILE_PATH;
+
+            // 判断是否存在 app 名称
+            String appName = MainConfig.DB_ENGINE_APP_NAME.getProperty();
+            // 原有的路径上，增加一级
+            File fileWithAppName = new File(new File(filePath).getParent(), appName);
+            filePath = new File(fileWithAppName, new File(filePath).getName()).getAbsolutePath();
         }
         if (MainConfig.DB_ENGINE_INIT_DELETE.getPropertyBoolean()) {
             // 启动时删除文件

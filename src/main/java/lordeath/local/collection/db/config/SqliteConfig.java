@@ -50,12 +50,6 @@ public class SqliteConfig {
     private static synchronized void init() {
         String filePath = System.getProperty(CONST_SQLITE_FILE_PATH);
         if (StringUtils.isBlank(filePath)) {
-            // 再加上年月日，用于自动清理过期的文件
-            // 使用年月日时分秒的格式
-//            String date = LocalDate.now().toString();
-//            date = StringUtils.replace(date, ":", "_");
-//            date = StringUtils.replace(date, "-", "_");
-//            filePath = DEFAULT_SQLITE_FILE_PATH + date + ".sqlite";
             filePath = DEFAULT_SQLITE_FILE_PATH + ".sqlite";
 
             // 判断是否存在 app 名称
