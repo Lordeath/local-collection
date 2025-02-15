@@ -10,9 +10,17 @@ import org.apache.commons.lang3.StringUtils;
 @Getter
 @RequiredArgsConstructor
 public enum MainConfig {
-    /** 数据库引擎类型配置键 */
+    /**
+     * 数据库引擎类型配置键
+     */
     DB_ENGINE("lordeath.local.collection.db.engine", "sqlite"),
+    /**
+     * 是否要在启动时删除原有的数据文件
+     */
     DB_ENGINE_INIT_DELETE("lordeath.local.collection.db.init.delete", "true"),
+    /**
+     * 写入缓存的触发写入的阈值，默认为1000
+     */
     CACHE_SIZE("lordeath.local.collection.cache.size", 1000 + ""),
     ;
 
@@ -57,6 +65,7 @@ public enum MainConfig {
     /**
      * 配置key对应的值
      *
+     * @param value 配置的值
      * @return 配置的值
      */
     @SuppressWarnings("UnusedReturnValue")
