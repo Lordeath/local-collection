@@ -13,4 +13,11 @@ public class LocalColumnForMap {
     // 表达式，比如 avg(age) AS age
     private String expression;
     private boolean isKey = false;
+
+    /**
+     * 数据库列映射定义类
+     * 用于定义源表和目标表之间的列映射关系
+     */
+    public LocalColumnForMap() {
+    }
 }
