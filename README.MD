@@ -29,17 +29,10 @@
 // 这一块可能是过度设计，用户不需要关心内部实现是sqlite还是h2
 System.setProperty(CONST_DB_ENGINE, "sqlite");
 
-// 使用时要记得关闭，否则数据会残留在磁盘上
+// 使用时要记得关闭，否则数据会残留在磁盘上（自动也会回收，当对象被内存回收时，会进行本地表的drop）
 try (LocalList<String> list = new LocalList<>(String.class)) {
     list.add("a");
     list.add("b");
 }
 ```
 
-心得体会：
-
-```text
-速度要求高的话，还是h2或者hsqldb比较好，sqlite的性能不如这2个，derby的性能和社区活跃度都不如以上的这些，不建议选择derby
-sqlite在固态硬盘上的表现和h2类似，但是内存开销是sqlite大大优于其他
-hsqldb在内存上的表现还不如直接用ArrayList，所以hsqldb之后也会放弃相关开发
-```
