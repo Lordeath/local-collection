@@ -25,7 +25,7 @@ public enum MainConfig {
     /**
      * 写入缓存的触发写入的阈值，默认为1000
      */
-    CACHE_SIZE("lordeath.local.collection.cache.size", 1000 + ""),
+    CACHE_SIZE("lordeath.local.collection.cache.size", 10000 + ""),
     ;
 
     private final String key;
