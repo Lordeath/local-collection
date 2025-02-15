@@ -48,6 +48,12 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * 大小计数器
      */
     private final AtomicInteger sizeCounter = new AtomicInteger(0);
+    /**
+     * 缓存持久化计数器
+     */
+//    private final AtomicInteger cacheToDBCounter = new AtomicInteger(0);
+//    private final AtomicBoolean cacheToDBFlag = new AtomicBoolean(false);
+    private volatile boolean cacheToDBFlag = false;
 
     /**
      * 清理器
@@ -93,7 +99,9 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         this.databaseOpt = DatabaseFactory.createDatabaseOptForMap(clazz, tableName, columnsForMap);
         DataSource dataSource = databaseOpt.getDataSource();
         cleanable = cleaner.register(this, () -> DBUtil.drop(tableName, dataSource));
-        cacheSize = MainConfig.CACHE_SIZE.getPropertyInt();
+//        cacheSize = MainConfig.CACHE_SIZE.getPropertyInt();
+        // map不进行缓存，直接使用db的数据
+        cacheSize = 0;
         cache = new ArrayList<>(cacheSize);
     }
 
@@ -140,6 +148,10 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     @Override
     public int size() {
+        boolean b = cacheSize > 0 && !cacheToDBFlag;
+        if (b) {
+            return cache.size();
+        }
         restoreCacheToDB();
         return sizeCounter.get();
     }
@@ -151,7 +163,6 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     @Override
     public boolean isEmpty() {
-        restoreCacheToDB();
         return size() == 0;
     }
 
@@ -174,6 +185,10 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     @SuppressWarnings("NullableProblems")
     @Override
     public Iterator<T> iterator() {
+        boolean b = cacheSize > 0 && !cacheToDBFlag;
+        if (b) {
+            return cache.iterator();
+        }
         restoreCacheToDB();
         return new LocalListIterator();
     }
@@ -345,6 +360,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         cache.clear();
         databaseOpt.clear();
         sizeCounter.set(0);
+        cacheToDBFlag = false;
     }
 
     /**
@@ -355,6 +371,10 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     @Override
     public T get(int index) {
+        boolean b = cacheSize > 0 && !cacheToDBFlag;
+        if (b) {
+            return cache.get(index);
+        }
         restoreCacheToDB();
         return databaseOpt.get(index, removeFlag.get());
     }
@@ -368,6 +388,10 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     @Override
     public T set(int index, T element) {
+        boolean b = cacheSize > 0 && !cacheToDBFlag;
+        if (b) {
+            return cache.set(index, element);
+        }
         restoreCacheToDB();
         return databaseOpt.set(index, element);
     }
@@ -391,6 +415,11 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     @Override
     public T remove(int index) {
+        boolean b = cacheSize > 0 && !cacheToDBFlag;
+        if (b) {
+            sizeCounter.decrementAndGet();
+            return cache.remove(index);
+        }
         restoreCacheToDB();
         removeFlag.set(true);
         T t = databaseOpt.remove(index);
@@ -456,6 +485,10 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     @SuppressWarnings("NullableProblems")
     @Override
     public List<T> subList(int fromIndex, int toIndex) {
+        boolean b = cacheSize > 0 && !cacheToDBFlag;
+        if (b) {
+            return cache.subList(fromIndex, toIndex);
+        }
         if (fromIndex < 0)
             throw new IndexOutOfBoundsException("fromIndex = " + fromIndex);
         if (toIndex > size())
@@ -533,12 +566,16 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         sizeCounter.set(databaseOpt.size());
     }
 
-    private void restoreCacheToDB() {
+    void restoreCacheToDB() {
+        cacheToDBFlag = true;
         if (cache.isEmpty()) {
             return;
         }
         databaseOpt.addAll(cache);
         cache.clear();
+//        cacheToDBFlag.set(true);
+//        cacheToDBCounter.incrementAndGet();
+//        cacheToDBCounter.get();
     }
 
     /**

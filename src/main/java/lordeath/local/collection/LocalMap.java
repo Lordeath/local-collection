@@ -274,6 +274,7 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
             LocalList<V> innerList = new LocalList<>((Class<V>) resultClass, newTableName, columnForMapList);
 
             // 给这个innerList灌入数据，insert into sink_table (...) select ... from source_table where ... group by ...
+            source.restoreCacheToDB();
             innerList.insertGroupedData(source.getDatabaseOpt().getTableName()
                     , newTableName, groupByColumns, whereClause, columnForMapList);
 
