@@ -46,7 +46,7 @@ jobs:
       run: mvn -B package --file pom.xml
       
     - name: Publish to GitHub Packages Apache Maven 发布
-      run: mvn deploy -s ${{ github.workspace }}/custom_settings.xml -X -Dgpg.passphrase="${{ secrets.MAVEN_GPG_PASSPHRASE }}"
+      run: mvn deploy -s ${{ github.workspace }}/custom_settings.xml -Dgpg.passphrase="${{ secrets.MAVEN_GPG_PASSPHRASE }}"
       env:
         GITHUB_TOKEN: ${{ github.token }}
  
