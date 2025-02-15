@@ -1,7 +1,6 @@
 package lordeath.local.collection.db.bean;
 
 import lombok.Data;
-import lombok.Generated;
 
 import java.lang.reflect.Field;
 
