@@ -13,6 +13,11 @@ import java.io.IOException;
  */
 public class SqliteConfig {
     /**
+     * 工具类，不允许实例化
+     */
+    private SqliteConfig() {
+    }
+    /**
      * SQLite数据库文件路径配置键
      */
     public static final String CONST_SQLITE_FILE_PATH = "lordeath.local.collection.sqlite.file.path";

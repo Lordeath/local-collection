@@ -21,6 +21,7 @@ public class SqliteTest {
     @BeforeAll
     public static void before() {
         MainConfig.DB_ENGINE.setProperty("sqlite");
+        MainConfig.DB_ENGINE_APP_NAME.setProperty("appTestName");
         Thread.currentThread().setName("sqlite");
     }
 

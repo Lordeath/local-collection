@@ -11,9 +11,14 @@ import java.util.Date;
 import java.util.List;
 
 /**
- *
+ * 用于操作列，把对象的字段转换成数据库的列相关的工具类
  */
 public class ColumnNameUtil {
+    /**
+     * 工具类，不允许实例化
+     */
+    private ColumnNameUtil() {
+    }
     /**
      * 获取字段
      *

@@ -15,6 +15,12 @@ import java.util.List;
 public class DatabaseFactory {
 
     /**
+     * 工具类，不允许实例化
+     */
+    private DatabaseFactory() {
+    }
+
+    /**
      * 创建数据库操作对象
      *
      * @param clazz 元素类型

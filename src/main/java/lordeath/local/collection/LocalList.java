@@ -19,6 +19,8 @@ import java.util.stream.Collectors;
 /**
  * 参考的是ArrayList，但是实现方式是H2数据库或者其他数据库
  * 注意，这个类是线程不安全的
+ *
+ * @param <T> the type of elements in this collection
  */
 @Getter
 @Slf4j
@@ -360,7 +362,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     /**
      * 设置指定索引元素
      *
-     * @param index  索引
+     * @param index   索引
      * @param element 元素
      * @return 被设置的元素
      */
@@ -373,7 +375,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     /**
      * 添加元素到指定索引
      *
-     * @param index 索引
+     * @param index   索引
      * @param element 元素
      */
     @Override
@@ -486,8 +488,8 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * 根据给定的键向指定表中添加或更新对象。
      *
      * @param keyColumn 键列名
-     * @param key      键值
-     * @param value    对象值
+     * @param key       键值
+     * @param value     对象值
      * @return 被更新或添加的对象
      */
     T putByKey(String keyColumn, String key, T value) {
@@ -505,7 +507,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * 根据给定的键删除对象。
      *
      * @param keyColumn 键列名
-     * @param key      键值
+     * @param key       键值
      */
     void removeByKey(String keyColumn, Object key) {
         restoreCacheToDB();
@@ -518,10 +520,10 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     /**
      * 插入分组数据。
      *
-     * @param tableName      源表名
-     * @param newTableName   目标表名
-     * @param groupByColumns 分组列
-     * @param whereClause     where条件
+     * @param tableName        源表名
+     * @param newTableName     目标表名
+     * @param groupByColumns   分组列
+     * @param whereClause      where条件
      * @param columnForMapList 列映射
      */
     void insertGroupedData(String tableName, String newTableName, List<String> groupByColumns, String whereClause, List<LocalColumnForMap> columnForMapList) {

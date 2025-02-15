@@ -11,6 +11,11 @@ import java.io.File;
  */
 public final class H2Config {
     /**
+     * 工具类，不允许实例化
+     */
+    private H2Config() {
+    }
+    /**
      * H2数据库文件路径配置键
      */
     public static final String CONST_H2_FILE_PATH = "lordeath.local.collection.h2.file.path";

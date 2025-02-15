@@ -21,6 +21,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class DBUtil {
     /**
+     * 工具类，不允许实例化
+     */
+    private DBUtil() {
+    }
+
+    /**
      * 添加数据
      *
      * @param obj        数据
