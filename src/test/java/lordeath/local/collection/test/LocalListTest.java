@@ -9,6 +9,7 @@ import lordeath.local.collection.LocalList;
 import lordeath.local.collection.LocalMap;
 import org.apache.commons.lang3.reflect.FieldUtils;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
 
@@ -21,6 +22,7 @@ public class LocalListTest {
         testMap();
     }
 
+    @SuppressWarnings("ConstantValue")
     static void testList() {
         try (LocalList<TestBean2> list = new LocalList<>()) {
             list.add(new TestBean2("Jack", 26, new Date(10000000), new BigDecimal("123.456789")));
@@ -144,6 +146,7 @@ public class LocalListTest {
         }
     }
 
+    @SuppressWarnings("ConstantValue")
     public static void testMap() {
 
         try (LocalList<TestBean1> list = new LocalList<>()) {
@@ -210,8 +213,8 @@ public class LocalListTest {
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class TestBean2 {
-        private static final long serialVersionUID = 1L;
+    public static class TestBean2 implements Serializable {
+        private static final long serialVersionUID = 5005900671586173979L;
         private String name;
         private int age;
         private Date birthTime;

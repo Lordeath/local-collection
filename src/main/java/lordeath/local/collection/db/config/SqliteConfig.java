@@ -62,15 +62,23 @@ public class SqliteConfig {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        if (MainConfig.DB_ENGINE_INIT_DELETE.getPropertyBoolean()) {
+            // 启动时删除文件
+            File file = new File(filePath);
+            if (file.exists()) {
+                file.delete();
+            }
+        }
 
         String username = System.getProperty(CONST_SQLITE_USERNAME);
         String password = System.getProperty(CONST_SQLITE_PASSWORD);
         HikariDataSource hikariDataSource = new HikariDataSource();
-//        hikariDataSource.setJdbcUrl("jdbc:sqlite:" + filePath + ";DB_CLOSE_DELAY=-1;MODE=MySQL;");
-        hikariDataSource.setJdbcUrl("jdbc:sqlite:" + filePath + "");
+        hikariDataSource.setJdbcUrl("jdbc:sqlite:" + filePath);
         hikariDataSource.setUsername(username);
         hikariDataSource.setPassword(password);
         dataSource = hikariDataSource;
+        File file = new File(filePath);
+        file.deleteOnExit();
     }
 
 }

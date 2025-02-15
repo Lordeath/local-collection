@@ -30,7 +30,7 @@ public class H2Test {
 
 
     @Test
-    public void testMemoryCost() throws InterruptedException {
+    public void testMemoryCost() {
         MemoryCostTest.testMemoryCostAll();
     }
 

@@ -4,12 +4,13 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.sql.DataSource;
+import java.io.File;
 import java.time.LocalDate;
 
 /**
  * H2数据库配置类
  */
-public class H2Config {
+public final class H2Config {
     /**
      * H2数据库文件路径配置键
      */
@@ -54,6 +55,14 @@ public class H2Config {
             date = StringUtils.replace(date, "-", "_");
             filePath = DEFAULT_H2_FILE_PATH + date;
         }
+        if (MainConfig.DB_ENGINE_INIT_DELETE.getPropertyBoolean()) {
+            // 启动时删除文件
+            File file = new File(filePath);
+            if (file.exists()) {
+                file.delete();
+            }
+        }
+
         String username = System.getProperty(CONST_H2_USERNAME);
         String password = System.getProperty(CONST_H2_PASSWORD);
         HikariDataSource hikariDataSource = new HikariDataSource();
@@ -61,6 +70,8 @@ public class H2Config {
         hikariDataSource.setUsername(username);
         hikariDataSource.setPassword(password);
         dataSource = hikariDataSource;
+        File file = new File(filePath);
+        file.deleteOnExit();
     }
 
 }

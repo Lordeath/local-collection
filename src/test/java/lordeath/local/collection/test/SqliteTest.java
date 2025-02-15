@@ -1,5 +1,6 @@
 package lordeath.local.collection.test;
 
+import lombok.extern.slf4j.Slf4j;
 import lordeath.local.collection.LocalList;
 import lordeath.local.collection.db.config.MainConfig;
 import lordeath.local.collection.db.util.DBUtil;
@@ -13,6 +14,7 @@ import java.util.stream.IntStream;
 import static lordeath.local.collection.test.LocalListTest.testCases;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@Slf4j
 public class SqliteTest {
 
 
@@ -36,7 +38,7 @@ public class SqliteTest {
     }
 
     @Test
-    public void testMemoryCost() throws InterruptedException {
+    public void testMemoryCost() {
         MemoryCostTest.testMemoryCostAll();
     }
 
@@ -54,9 +56,11 @@ public class SqliteTest {
         testAddManyList();
     }
 
+    @SuppressWarnings("resource")
     private static void testAddManyList() {
         LocalList<String> list = new LocalList<>();
         list.addAll(IntStream.range(1, 100000).mapToObj(x -> x + "").collect(Collectors.toList()));
+        log.info("插入用于内存测试的列表 size: {}", list.size());
     }
 
 }

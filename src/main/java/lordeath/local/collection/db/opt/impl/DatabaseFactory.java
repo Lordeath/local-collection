@@ -14,6 +14,13 @@ import java.util.List;
 @Slf4j
 public class DatabaseFactory {
 
+    /**
+     * 创建数据库操作对象
+     *
+     * @param clazz 元素类型
+     * @param <T>   元素类型
+     * @return 数据库操作对象
+     */
     public static <T> IDatabaseOpt<T> createDatabaseOptForList(Class<T> clazz) {
         // 这里可以根据配置或者其他条件选择不同的数据库实现
         // 目前默认使用H2数据库
@@ -29,9 +36,9 @@ public class DatabaseFactory {
         }
         return databaseOpt;
     }
-    
+
     /**
-     * 创建数据库操作对象
+     * 创建数据库操作对象 （map使用的内部list）
      * @param clazz 元素类型
      * @param tableName 表名
      * @param columnsForMap 列映射定义

@@ -316,7 +316,6 @@ public class DBUtil {
                         throw new RuntimeException("不支持的类型: " + clazz);
                     }
                 }
-                return null;
             } else {
                 if (resultSet.next()) {
                     T t = clazz.getDeclaredConstructor().newInstance();
@@ -350,8 +349,8 @@ public class DBUtil {
                     }
                     return t;
                 }
-                return null;
             }
+            return null;
 
         } catch (SQLException | InstantiationException | IllegalAccessException | InvocationTargetException |
                  NoSuchMethodException e) {

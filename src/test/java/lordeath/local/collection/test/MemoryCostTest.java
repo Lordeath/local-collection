@@ -5,7 +5,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lordeath.local.collection.LocalList;
-import org.junit.jupiter.api.Test;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
@@ -21,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Slf4j
 public class MemoryCostTest {
 
-    public static void testMemoryCostAll() throws InterruptedException {
+    public static void testMemoryCostAll() {
         long localListCost = testLocalListMemoryCost();
         long inMemoryCost = testMemoryCost();
         log.warn("内存消耗: {} 本地列表消耗: {}", inMemoryCost, localListCost);
@@ -29,7 +28,7 @@ public class MemoryCostTest {
     }
 
 
-    public static long testMemoryCost() throws InterruptedException {
+    public static long testMemoryCost() {
 
         // 获取当前内存使用情况
         MemoryUsage memoryUsageBefore = printMem();
@@ -46,12 +45,12 @@ public class MemoryCostTest {
 
         MemoryUsage memoryUsageAfter = printMem();
         long cost = memoryUsageAfter.getUsed() - memoryUsageBefore.getUsed();
-        log.info("列表大小: {} 使用的内存: {}", list.size(), cost);
+        log.info("列表大小: {} 使用的内存(纯内存): {}", list.size(), cost);
         return cost;
     }
 
 
-    public static long testLocalListMemoryCost() throws InterruptedException {
+    public static long testLocalListMemoryCost() {
         // 获取当前内存使用情况
         MemoryUsage memoryUsageBefore = printMem();
 
@@ -72,7 +71,7 @@ public class MemoryCostTest {
         }
     }
 
-    private static MemoryUsage printMem() throws InterruptedException {
+    private static MemoryUsage printMem() {
 
         // 尽量触发垃圾回收
         System.gc();

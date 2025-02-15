@@ -60,7 +60,7 @@ class SqliteOpt<T> implements IDatabaseOpt<T> {
         dataSource = SqliteConfig.getDataSource();
         tableName = "tmp_" + UUID.randomUUID().toString().replace("-", "");
         pkColumnName = "id" + UUID.randomUUID().toString().replace("-", "");
-        log.debug("开始初始化数据源: {} {}", dataSource, tableName);
+        log.debug("开始初始化数据源（用class）: {} {}", dataSource, tableName);
         columns = Collections.unmodifiableList(ColumnNameUtil.getFields(clazz));
         // 创建表
         // 1. 获取到表名
@@ -72,10 +72,10 @@ class SqliteOpt<T> implements IDatabaseOpt<T> {
             sql.append(", ").append(column.getColumnName()).append(" ").append(column.getDbType());
         }
         sql.append(");");
-        log.debug("创建表的sql: {}", sql);
+        log.debug("创建表的sql（用class）: {}", sql);
         // 执行sql
         DBUtil.executeSql(dataSource, sql.toString());
-        log.debug("数据源初始化完毕: {} {}", dataSource, tableName);
+        log.debug("数据源初始化完毕（用class）: {} {}", dataSource, tableName);
     }
 
     /**

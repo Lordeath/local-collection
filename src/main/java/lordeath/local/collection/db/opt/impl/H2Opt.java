@@ -60,7 +60,7 @@ class H2Opt<T> implements IDatabaseOpt<T> {
         dataSource = H2Config.getDataSource();
         tableName = "tmp_" + UUID.randomUUID().toString().replace("-", "");
         pkColumnName = "id" + UUID.randomUUID().toString().replace("-", "");
-        log.debug("开始初始化数据源: {} {}", dataSource, tableName);
+        log.debug("开始初始化数据源（用class）: {} {}", dataSource, tableName);
         columns = Collections.unmodifiableList(ColumnNameUtil.getFields(clazz));
         // 创建表
         // 1. 获取到表名
@@ -72,10 +72,10 @@ class H2Opt<T> implements IDatabaseOpt<T> {
             sql.append(", ").append(column.getColumnName()).append(" ").append(column.getDbType());
         }
         sql.append(");");
-        log.debug("创建表的sql: {}", sql);
+        log.debug("创建表的sql（用class）: {}", sql);
         // 执行sql
         DBUtil.executeSql(dataSource, sql.toString());
-        log.debug("数据源初始化完毕: {} {}", dataSource, tableName);
+        log.debug("数据源初始化完毕（用class）: {} {}", dataSource, tableName);
     }
 
     /**
@@ -90,7 +90,7 @@ class H2Opt<T> implements IDatabaseOpt<T> {
         this.tableName = tableName;
         this.columns = columnsForMap.stream().map(LocalColumnForMap::getSinkColumn).collect(Collectors.toList());
         dataSource = H2Config.getDataSource();
-        log.debug("开始初始化数据源: {} {}", dataSource, tableName);
+        log.debug("开始初始化数据源（用于Map）: {} {}", dataSource, tableName);
         // 创建表
         // 1. 获取到表名
         // 2. 获取到列名和类型
@@ -103,7 +103,7 @@ class H2Opt<T> implements IDatabaseOpt<T> {
         }
         sql.delete(sql.length() - 2, sql.length());
         sql.append(");");
-        log.debug("创建表的sql: {}", sql);
+        log.debug("创建表的sql（用于Map）: {}", sql);
         // 执行sql
         DBUtil.executeSql(dataSource, sql.toString());
         // 使用 columnsForMap的isKey判断是否是
@@ -113,7 +113,7 @@ class H2Opt<T> implements IDatabaseOpt<T> {
         log.debug("表创建完毕，接下来设置map的key索引: {}", sql);
         DBUtil.executeSql(dataSource, sql.toString());
         pkColumnName = null;
-        log.debug("数据源初始化完毕: {} {}", dataSource, tableName);
+        log.debug("数据源初始化完毕（用于Map）: {} {}", dataSource, tableName);
     }
 
     /**
