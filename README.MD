@@ -24,7 +24,7 @@
 <dependency>
     <groupId>io.github.lordeath</groupId>
     <artifactId>local-collection</artifactId>
-    <version>1.0.20250215.4</version>
+    <version>1.0.20250306.1</version>
 </dependency>
 ```
 
