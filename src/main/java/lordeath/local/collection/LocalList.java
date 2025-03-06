@@ -578,6 +578,9 @@ public class LocalList<T> implements AutoCloseable, List<T> {
 //        cacheToDBCounter.get();
     }
 
+    private final int preReadCacheSize = 5000;
+    private List<T> preReadCache = new ArrayList<>(preReadCacheSize);
+
     /**
      * 列表迭代器实现
      */
@@ -591,6 +594,16 @@ public class LocalList<T> implements AutoCloseable, List<T> {
          * 最后返回的索引
          */
         private int lastRet = -1;
+
+        /**
+         * 当前预读缓存的起始索引
+         */
+        private int preReadStartIndex = -1;
+
+        /**
+         * 当前预读缓存的结束索引
+         */
+        private int preReadEndIndex = -1;
 
         /**
          * 构造函数
@@ -608,6 +621,21 @@ public class LocalList<T> implements AutoCloseable, List<T> {
             if (index < 0 || index > size())
                 throw new IndexOutOfBoundsException("Index: " + index);
             cursor = index;
+            // 初始化时预读数据
+            if (cursor < size()) {
+                preReadData();
+            }
+        }
+
+        /**
+         * 预读数据到缓存
+         */
+        private void preReadData() {
+            preReadStartIndex = cursor;
+            preReadEndIndex = Math.min(cursor + preReadCacheSize, size());
+            List<T> batchData = databaseOpt.batchQuery(preReadStartIndex, preReadEndIndex);
+            preReadCache.clear();
+            preReadCache.addAll(batchData);
         }
 
         /**
@@ -630,7 +658,14 @@ public class LocalList<T> implements AutoCloseable, List<T> {
             if (!hasNext())
                 throw new NoSuchElementException();
             lastRet = cursor;
-            return get(cursor++);
+
+            // 如果当前游标不在预读缓存范围内，重新预读
+            if (cursor >= preReadEndIndex) {
+                preReadData();
+            }
+
+            // 从预读缓存中获取数据
+            return preReadCache.get(cursor++ - preReadStartIndex);
         }
 
         /**
@@ -653,7 +688,14 @@ public class LocalList<T> implements AutoCloseable, List<T> {
             if (!hasPrevious())
                 throw new NoSuchElementException();
             lastRet = --cursor;
-            return get(cursor);
+
+            // 如果当前游标不在预读缓存范围内，重新预读
+            if (cursor < preReadStartIndex) {
+                preReadData();
+            }
+
+            // 从预读缓存中获取数据
+            return preReadCache.get(cursor - preReadStartIndex);
         }
 
         /**
