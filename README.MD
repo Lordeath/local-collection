@@ -1,9 +1,17 @@
 一个本地缓存，用作替代ArrayList或者HashMap，使用本地的硬盘上的缓存来降低内存的要求
 
+# 开发的目的
+线上的项目经常会遇到OOM的问题，这些OOM的问题通常由报表或者一些需要大规模取数的作业触发，引发OOM的对象是List或者Map居多。那有没有办法让List、Map持久化在硬盘上，不使用内存？以此为思路，开发的工具。
+
+
 基本思路是使用H2或者SQLite等本地数据库，优先使用SQLite，之后也会考虑集成其他的数据库引擎
+
 
 已经完成了一些基础的操作，操作方法详见[LocalListTest](src/test/java/lordeath/local/collection/test/LocalListTest.java)
 
+但是这个local-collection使用上有一些限制：
+- 取出来的对象修改之后不会自动进行持久化，需要手动使用 `LocalList.set(int i, Object o)` 才能持久化到硬盘，所以这个LocalList不适合修改对象内容
+- List支持的类型有限，不支持复杂类型，只支持一些基础类型，可以进行持久化的类型
 
 后续想要实现的功能：
 
