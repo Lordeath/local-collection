@@ -13,7 +13,7 @@
 - 取出来的对象修改之后不会自动进行持久化，需要手动使用 `LocalList.set(int i, Object o)` 才能持久化到硬盘，所以这个LocalList不适合修改对象内容
 - List支持的类型有限，不支持复杂类型，只支持一些基础类型，可以进行持久化的类型
 
-后续想要实现的功能：
+# 后续想要实现的功能：
 
 - [X] LocalList转换成Map，实现基本的聚合
 - [X] Map 也是基于H2或者其他的数据库实现的
@@ -27,7 +27,7 @@
 - [ ] 本地磁盘的目录可以选定成SSD的，这个本身已经有配置，TODO 文档化
 
 
-集成方式，以sqlite举例：
+# 集成方式，以sqlite举例：
 ```xml
 <dependency>
     <groupId>io.github.lordeath</groupId>
