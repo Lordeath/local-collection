@@ -11,7 +11,7 @@
 
 但是这个local-collection使用上有一些限制：
 - 取出来的对象修改之后不会自动进行持久化，需要手动使用 `LocalList.set(int i, Object o)` 才能持久化到硬盘，所以这个LocalList不适合修改对象内容
-- 支持的类型有限，不支持复杂类型，只支持一些基础类型，可以进行持久化的类型，比如Integer、String等，详见[代码链接](src/main/java/lordeath/local/collection/db/util/ColumnNameUtil.java#getLocalColumns)
+- 支持的类型有限，不支持复杂类型，只支持一些基础类型，可以进行持久化的类型，比如Integer、String等，详见[代码链接](src/main/java/lordeath/local/collection/db/util/ColumnNameUtil.java#L59)
 
 # 后续想要实现的功能：
 
