@@ -42,7 +42,7 @@
 // 这一块可能是过度设计，用户不需要关心内部实现是sqlite还是h2
 System.setProperty(CONST_DB_ENGINE, "sqlite");
 
-// 使用时要记得关闭，否则数据会残留在磁盘上（自动也会回收，当对象被内存回收时，会进行本地表的drop）
+// 使用时最好要记得关闭，否则数据可能会残留在磁盘上（自动也会回收，当对象被内存回收时，会进行本地表的drop，这个逻辑通过Cleaner和finalize实现，不保证执行）
 try (LocalList<String> list = new LocalList<>(String.class)) {
     list.add("a");
     list.add("b");
