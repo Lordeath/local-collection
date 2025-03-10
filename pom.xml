@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.lordeath</groupId>
     <artifactId>local-collection</artifactId>
-    <version>1.0.20250306.1</version>
+    <version>1.0.20250310.1</version>
 
     <description>使用本地磁盘（H2或者SQLite或者HSQLDB等本地数据库）完成的类似于ArrayList、HashMap的替代，用于解决OOM问题</description>
     <url>https://github.com/Lordeath/local-collection</url>
