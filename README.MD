@@ -4,7 +4,7 @@
 线上的项目经常会遇到OOM的问题，这些OOM的问题通常由报表或者一些需要大规模取数的作业触发，引发OOM的对象是List或者Map居多。那有没有办法让List、Map持久化在硬盘上，不使用内存？以此为思路，开发的工具。
 
 
-基本思路是使用H2或者SQLite等本地数据库，优先使用SQLite，之后也会考虑集成其他的数据库引擎
+基本思路是使用H2或者SQLite等本地数据库，优先使用SQLite，也尝试了derby、dsqldb等数据库，最后发现还是sqlite和h2最好，默认是sqlite。
 
 
 已经完成了一些基础的操作，操作方法详见[LocalListTest](src/test/java/lordeath/local/collection/test/LocalListTest.java)
