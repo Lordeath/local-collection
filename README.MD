@@ -29,6 +29,7 @@
 
 # 集成方式，以sqlite举例：
 ```xml
+<!-- https://mvnrepository.com/artifact/io.github.lordeath/local-collection -->
 <dependency>
     <groupId>io.github.lordeath</groupId>
     <artifactId>local-collection</artifactId>
