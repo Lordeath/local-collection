@@ -67,6 +67,10 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
     @SuppressWarnings({"resource", "unchecked"})
     @Override
     public V put(K key, V value) {
+        V oldValue = null;
+        if (innerList.getDatabaseOpt() != null) {
+            oldValue = get(key);
+        }
         if (innerList.getDatabaseOpt() == null) {
             Class<?> resultClass = value.getClass();
             String newTableName = "map_" + UUID.randomUUID().toString().replace("-", "");
@@ -115,7 +119,8 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
             this.innerList.databaseOpt = innerList.databaseOpt;
             this.innerList.columns = innerList.columns;
         }
-        return innerList.putByKey(keyColumn, key + "", value);
+        innerList.putByKey(keyColumn, key + "", value);
+        return oldValue;
     }
 
     @Override

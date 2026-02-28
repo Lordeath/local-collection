@@ -214,18 +214,46 @@ public class DBUtil {
             stmt.setInt(1, toIndex - fromIndex);
             stmt.setInt(2, fromIndex);
             try (ResultSet resultSet = stmt.executeQuery()) {
-                while (resultSet.next()) {
-                    T obj = clazz.getDeclaredConstructor().newInstance();
-                    for (LocalColumn column : columns) {
-                        if (column.getField() != null) {
-                            column.getField().setAccessible(true);
-                            Object value = resultSet.getObject(column.getColumnName());
-                            if (value != null) {
-                                column.getField().set(obj, value);
-                            }
+                if (columns.size() == 1 && columns.get(0).getField() == null) {
+                    while (resultSet.next()) {
+                        if (clazz == String.class) {
+                            result.add(clazz.cast(resultSet.getString(columns.get(0).getColumnName())));
+                        } else if (clazz == Integer.class) {
+                            result.add(clazz.cast(resultSet.getInt(columns.get(0).getColumnName())));
+                        } else if (clazz == Long.class) {
+                            result.add(clazz.cast(resultSet.getLong(columns.get(0).getColumnName())));
+                        } else if (clazz == Double.class) {
+                            result.add(clazz.cast(resultSet.getDouble(columns.get(0).getColumnName())));
+                        } else if (clazz == Float.class) {
+                            result.add(clazz.cast(resultSet.getFloat(columns.get(0).getColumnName())));
+                        } else if (clazz == Boolean.class) {
+                            result.add(clazz.cast(resultSet.getBoolean(columns.get(0).getColumnName())));
+                        } else if (clazz == Character.class) {
+                            result.add(clazz.cast(resultSet.getString(columns.get(0).getColumnName()).charAt(0)));
+                        } else if (clazz == Date.class) {
+                            Object dateInDb = resultSet.getObject(columns.get(0).getColumnName());
+                            result.add(clazz.cast(convertObjectToDate(dateInDb)));
+                        } else if (clazz == BigDecimal.class) {
+                            result.add(clazz.cast(resultSet.getBigDecimal(columns.get(0).getColumnName())));
+                        } else {
+                            throw new RuntimeException("不支持的类型: " + clazz);
                         }
                     }
-                    result.add(obj);
+                } else {
+                    while (resultSet.next()) {
+                        T obj = clazz.getDeclaredConstructor().newInstance();
+                        // 通过sql的返回结果，使用反射来填充这些字段
+                        for (LocalColumn column : columns) {
+                            if (column.getField() != null) {
+                                column.getField().setAccessible(true);
+                                Object value = resultSet.getObject(column.getColumnName());
+                                if (value != null) {
+                                    column.getField().set(obj, value);
+                                }
+                            }
+                        }
+                        result.add(obj);
+                    }
                 }
             }
         } catch (Exception e) {

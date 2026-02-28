@@ -10,16 +10,31 @@ import lordeath.local.collection.LocalMap;
 import org.apache.commons.lang3.reflect.FieldUtils;
 
 import java.io.Serializable;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.ConcurrentModificationException;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.NoSuchElementException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
 public class LocalListTest {
+    private static final String CACHE_SIZE_KEY = "lordeath.local.collection.cache.size";
+
     public static void testCases() {
         testList();
         testMap();
+        testUnsupportedOperations();
+        testAddAllBranches();
+        testDbIteratorAndListIterator();
+        testSubListDbValidation();
+        testPkWithRemoveFlag();
     }
 
     @SuppressWarnings("ConstantValue")
@@ -201,6 +216,174 @@ public class LocalListTest {
             assertEquals(0, map.size());
         }
 
+        try (LocalMap<String, String> map = new LocalMap<>()) {
+            assertNull(map.put("a", "1"));
+            assertEquals(1, map.size());
+            assertEquals("1", map.get("a"));
+
+            assertEquals("1", map.put("a", "2"));
+            assertEquals(1, map.size());
+            assertEquals("2", map.get("a"));
+
+            assertEquals("2", map.remove("a"));
+            assertEquals(0, map.size());
+
+            assertDoesNotThrow(() -> invokeRemoveByKey(map.getInnerList(), map.getKeyColumn(), "a"));
+            assertEquals(0, map.size());
+        }
+
+    }
+
+    private static void testUnsupportedOperations() {
+        try (LocalList<String> list = new LocalList<>(String.class)) {
+            assertThrows(UnsupportedOperationException.class, () -> list.contains("a"));
+            assertThrows(UnsupportedOperationException.class, () -> list.toArray());
+            assertThrows(UnsupportedOperationException.class, () -> list.toArray(new String[0]));
+            assertThrows(UnsupportedOperationException.class, () -> list.remove((Object) "a"));
+            assertThrows(UnsupportedOperationException.class, () -> list.containsAll(Collections.singleton("a")));
+            assertThrows(UnsupportedOperationException.class, () -> list.addAll(0, Collections.singletonList("a")));
+            assertThrows(UnsupportedOperationException.class, () -> list.removeAll(Collections.singleton("a")));
+            assertThrows(UnsupportedOperationException.class, () -> list.retainAll(Collections.singleton("a")));
+            assertThrows(UnsupportedOperationException.class, () -> list.add(0, "a"));
+            assertThrows(UnsupportedOperationException.class, () -> list.indexOf("a"));
+            assertThrows(UnsupportedOperationException.class, () -> list.lastIndexOf("a"));
+        }
+    }
+
+    private static void testAddAllBranches() {
+        withCacheSize(0, () -> {
+            try (LocalList<String> list = new LocalList<>(String.class)) {
+                assertTrue(list.addAll(Lists.newArrayList("a", "b")));
+                assertEquals(2, list.size());
+                assertEquals("a", list.get(0));
+                assertEquals("b", list.get(1));
+            }
+        });
+
+        withCacheSize(2, () -> {
+            try (LocalList<String> list = new LocalList<>(String.class)) {
+                list.add("x");
+                assertTrue(list.addAll(Lists.newArrayList("a", "b")));
+                assertEquals(3, list.size());
+                assertEquals("x", list.get(0));
+                assertEquals("a", list.get(1));
+                assertEquals("b", list.get(2));
+            }
+        });
+
+        withCacheSize(2, () -> {
+            try (LocalList<String> list = new LocalList<>(String.class)) {
+                list.add("a");
+                list.add("b");
+                assertTrue(list.addAll(Collections.singletonList("c")));
+                assertEquals(3, list.size());
+                assertEquals("a", list.get(0));
+                assertEquals("b", list.get(1));
+                assertEquals("c", list.get(2));
+            }
+        });
+
+        withCacheSize(3, () -> {
+            try (LocalList<String> list = new LocalList<>(String.class)) {
+                list.add("a");
+                list.add("b");
+                assertTrue(list.addAll(Collections.singletonList("c")));
+                assertEquals(3, list.size());
+                assertEquals("a", list.get(0));
+                assertEquals("b", list.get(1));
+                assertEquals("c", list.get(2));
+            }
+        });
+
+        try (LocalList<String> list = new LocalList<>()) {
+            RuntimeException ex = assertThrows(RuntimeException.class, () -> list.addAll(Collections.emptyList()));
+            assertTrue(ex.getMessage().contains("数据源操作初始化失败"));
+        }
+    }
+
+    private static void testDbIteratorAndListIterator() {
+        withCacheSize(1, () -> {
+            try (LocalList<String> list = new LocalList<>(String.class)) {
+                list.add("a");
+                list.add("b");
+                assertEquals(2, list.size());
+
+                Iterator<String> it = list.iterator();
+                assertTrue(it.hasNext());
+                assertEquals("a", it.next());
+                assertTrue(it.hasNext());
+                assertEquals("b", it.next());
+                assertFalse(it.hasNext());
+
+                assertThrows(IndexOutOfBoundsException.class, () -> list.listIterator(-1));
+                assertThrows(IndexOutOfBoundsException.class, () -> list.listIterator(list.size() + 1));
+                assertThrows(NoSuchElementException.class, () -> list.listIterator(list.size()).next());
+                assertThrows(NoSuchElementException.class, () -> list.listIterator(0).previous());
+
+                ListIterator<String> lit = list.listIterator();
+                assertThrows(IllegalStateException.class, lit::remove);
+                assertThrows(IllegalStateException.class, () -> lit.set("x"));
+
+                assertEquals("a", lit.next());
+                assertTrue(lit.hasPrevious());
+                assertEquals("a", lit.previous());
+
+                lit.next();
+                list.clear();
+                assertThrows(ConcurrentModificationException.class, lit::remove);
+            }
+        });
+    }
+
+    private static void testSubListDbValidation() {
+        withCacheSize(0, () -> {
+            try (LocalList<String> list = new LocalList<>(String.class)) {
+                list.addAll(Lists.newArrayList("a", "b", "c"));
+
+                assertThrows(IndexOutOfBoundsException.class, () -> list.subList(-1, 0));
+                assertThrows(IndexOutOfBoundsException.class, () -> list.subList(0, list.size() + 1));
+                assertThrows(IllegalArgumentException.class, () -> list.subList(2, 1));
+
+                List<String> sub = list.subList(1, 3);
+                assertEquals(Arrays.asList("b", "c"), sub);
+                assertThrows(UnsupportedOperationException.class, () -> sub.add("x"));
+            }
+        });
+    }
+
+    private static void testPkWithRemoveFlag() {
+        withCacheSize(0, () -> {
+            try (LocalList<String> list = new LocalList<>(String.class)) {
+                list.add("a");
+                list.add("b");
+                list.add("c");
+
+                assertEquals("b", list.remove(1));
+                assertEquals(2, list.size());
+                assertEquals(1, list.pk(0));
+                assertEquals(3, list.pk(1));
+            }
+        });
+    }
+
+    private static void withCacheSize(int cacheSize, Runnable runnable) {
+        String old = System.getProperty(CACHE_SIZE_KEY);
+        System.setProperty(CACHE_SIZE_KEY, String.valueOf(cacheSize));
+        try {
+            runnable.run();
+        } finally {
+            if (old == null) {
+                System.clearProperty(CACHE_SIZE_KEY);
+            } else {
+                System.setProperty(CACHE_SIZE_KEY, old);
+            }
+        }
+    }
+
+    private static void invokeRemoveByKey(LocalList<?> list, String keyColumn, Object key) throws Exception {
+        Method m = LocalList.class.getDeclaredMethod("removeByKey", String.class, Object.class);
+        m.setAccessible(true);
+        m.invoke(list, keyColumn, key);
     }
 
     @Data

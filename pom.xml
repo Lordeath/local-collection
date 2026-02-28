@@ -26,6 +26,7 @@
         <java.version>11</java.version>
         <maven.compiler.target>11</maven.compiler.target>
         <maven.compiler.source>11</maven.compiler.source>
+        <gpg.skip>true</gpg.skip>
     </properties>
 
     <scm>
@@ -213,6 +214,7 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <skip>${gpg.skip}</skip>
                     <!-- $env:GPG_EXECUTABLE = "D:\Program Files (x86)\GnuPG\bin\gpg.exe" -->
 <!--                     <executable>${env.GPG_EXECUTABLE}</executable> -->
 <!--                     <passphrase>${env.MAVEN_GPG_PASSPHRASE}</passphrase> -->
