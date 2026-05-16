@@ -429,6 +429,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         cache.clear();
         databaseOpt.clear();
         sizeCounter.set(0);
+        removeFlag.set(true);
         cacheToDBFlag = false;
         runtimeMetrics.recordDatabaseSize(0);
         recoveryComplete();
