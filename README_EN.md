@@ -244,6 +244,20 @@ public final class LocalCollectionConcurrencyKit {
 
 This keeps each compound operation locked only for the smallest required scope while preserving atomic behavior.
 
+## Deployment and operations
+
+- Configure DB path and credentials:
+  - `lordeath.local.collection.sqlite.file.path`
+  - `lordeath.local.collection.h2.file.path`
+  - `lordeath.local.collection.sqlite.file.username`
+  - `lordeath.local.collection.sqlite.file.password`
+  - `lordeath.local.collection.h2.file.username`
+  - `lordeath.local.collection.h2.file.password`
+- Set cache size by service profile:
+  - `lordeath.local.collection.cache.size`
+- Use try-with-resources to ensure `close()` executes and temp tables are dropped.
+- In multi-app environments, isolate workspace paths to avoid table collisions.
+
 ## Roadmap
 
 - [x] `LocalList` to `LocalMap` aggregation path
@@ -251,7 +265,7 @@ This keeps each compound operation locked only for the smallest required scope w
 - [x] Cache + bulk flush strategy
 - [x] Startup cleanup and app-level directory isolation
 - [x] Iterator prefetch strategy (`preReadCacheSize = 5000`)
-- [ ] Extend operational documentation and deployment guidance
+- [x] Extend operational documentation and deployment guidance
 - [x] Clarify stream usage boundaries
 - [ ] Add SQL dialect compatibility layer for `LocalMap` grouping expressions (SQLite/H2)
 - [ ] Add atomic composite operations for concurrent use (`putIfAbsent`, `computeIfAbsent`, `removeIfEquals`)
