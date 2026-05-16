@@ -244,6 +244,17 @@ public final class LocalCollectionConcurrencyKit {
 - [x] 读缓存与迭代预读策略（`preReadCacheSize = 5000`）
 - [ ] 继续补齐文档与可运维参数说明
 - [ ] 更细化的 stream / iterator 使用边界说明
+- [ ] 为 `LocalMap` 聚合提供 SQL 方言兼容层（SQLite / H2）
+- [ ] 增加并发场景下可用的复合原子方法（如 `putIfAbsent`、`computeIfAbsent`、`removeIfEquals`）
+- [ ] 扩展 `LocalList`/`LocalMap` 常用 API 覆盖，并明确不支持方法的替代路径
+- [ ] 增加运行时可观测指标（缓存命中率、缓存大小、刷库次数/耗时、数据库文件大小）
+- [ ] 增加异常场景恢复能力（数据库文件损坏、异常写入中断、异常退出后的恢复）
+- [ ] 增加可配置写入策略（刷库时间阈值、刷库批量大小、索引创建策略）
+- [ ] 增加快照导入导出（JSON/CSV）与备份恢复流程
+- [ ] 支持非内置类型的可插拔序列化方案（例如 JSON 序列化）
+- [ ] 补充 Spring Boot Starter 与自动配置文档
+- [ ] 扩展同步包装器接口，新增原子批量操作 API
+- [ ] 增加上线前检查清单与生产故障排查手册
 
 ## 英文版
 
