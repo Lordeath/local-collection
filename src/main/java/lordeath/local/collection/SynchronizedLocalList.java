@@ -9,6 +9,7 @@ import java.util.ListIterator;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
+import java.io.File;
 
 /**
  * LocalList线程安全包装类。
@@ -131,6 +132,30 @@ public final class SynchronizedLocalList<E> implements List<E>, AutoCloseable {
     public void clear() {
         synchronized (mutex) {
             delegate.clear();
+        }
+    }
+
+    public void exportToJson(File snapshotFile) {
+        synchronized (mutex) {
+            delegate.exportToJson(snapshotFile);
+        }
+    }
+
+    public void importFromJson(File snapshotFile) {
+        synchronized (mutex) {
+            delegate.importFromJson(snapshotFile);
+        }
+    }
+
+    public void exportToCsv(File snapshotFile) {
+        synchronized (mutex) {
+            delegate.exportToCsv(snapshotFile);
+        }
+    }
+
+    public void importFromCsv(File snapshotFile) {
+        synchronized (mutex) {
+            delegate.importFromCsv(snapshotFile);
         }
     }
 
@@ -363,4 +388,3 @@ public final class SynchronizedLocalList<E> implements List<E>, AutoCloseable {
         }
     }
 }
-

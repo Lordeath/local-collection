@@ -10,11 +10,17 @@ import lordeath.local.collection.db.opt.inter.IDatabaseOpt;
 import lordeath.local.collection.db.util.DBUtil;
 
 import javax.sql.DataSource;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
 import java.lang.ref.Cleaner;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 /**
  * 参考的是ArrayList，但是实现方式是H2数据库或者其他数据库
@@ -669,6 +675,510 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         long now = System.currentTimeMillis();
         if (now - lastFlushMillis >= interval) {
             restoreCacheToDB();
+        }
+    }
+
+    /**
+     * 将当前列表快照导出为 JSON 文件。
+     *
+     * @param snapshotFile 快照文件
+     */
+    public void exportToJson(File snapshotFile) {
+        if (snapshotFile == null) {
+            throw new IllegalArgumentException("snapshotFile is null");
+        }
+        if (databaseOpt == null || columns == null || columns.isEmpty()) {
+            throw new IllegalStateException("列表尚未初始化，无法导出快照");
+        }
+        restoreCacheToDB();
+        try (BufferedWriter writer = Files.newBufferedWriter(snapshotFile.toPath(), StandardCharsets.UTF_8)) {
+            writer.write("{\"schema\":[");
+            for (int i = 0; i < columns.size(); i++) {
+                if (i > 0) {
+                    writer.write(",");
+                }
+                writer.write('"');
+                writer.write(escapeJson(columns.get(i).getColumnName()));
+                writer.write('"');
+            }
+            writer.write("],\"rows\":[");
+            for (int i = 0; i < size(); i++) {
+                if (i > 0) {
+                    writer.write(",");
+                }
+                T value = get(i);
+                writer.write('[');
+                for (int j = 0; j < columns.size(); j++) {
+                    LocalColumn column = columns.get(j);
+                    if (j > 0) {
+                        writer.write(",");
+                    }
+                    Object fieldValue = resolveFieldValue(value, column);
+                    if (fieldValue == null) {
+                        writer.write("null");
+                    } else {
+                        writer.write('"');
+                        writer.write(escapeJson(toStoredValue(fieldValue)));
+                        writer.write('"');
+                    }
+                }
+                writer.write(']');
+            }
+            writer.write("]}");
+        } catch (IOException e) {
+            throw new RuntimeException("导出JSON快照失败", e);
+        }
+    }
+
+    /**
+     * 从 JSON 快照恢复列表，恢复前会先清空当前列表。
+     *
+     * @param snapshotFile 快照文件
+     */
+    public void importFromJson(File snapshotFile) {
+        if (snapshotFile == null) {
+            throw new IllegalArgumentException("snapshotFile is null");
+        }
+        if (databaseOpt == null || columns == null || columns.isEmpty()) {
+            throw new IllegalStateException("列表尚未初始化，无法恢复快照");
+        }
+        if (!snapshotFile.exists()) {
+            throw new IllegalArgumentException("快照文件不存在: " + snapshotFile);
+        }
+        clear();
+        String text;
+        try {
+            text = Files.readString(snapshotFile.toPath(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new RuntimeException("读取JSON快照失败", e);
+        }
+        SnapshotRows snapshot = parseJsonSnapshot(text);
+        if (snapshot.columnNames.length != columns.size()) {
+            throw new IllegalArgumentException("快照 schema 与当前列表结构不一致");
+        }
+        for (int i = 0; i < columns.size(); i++) {
+            if (!columns.get(i).getColumnName().equals(snapshot.columnNames[i])) {
+                throw new IllegalArgumentException("快照 schema 与当前列表结构不一致");
+            }
+        }
+        for (List<String> row : snapshot.rows) {
+            add(createRecordFromSnapshot(row));
+        }
+    }
+
+    /**
+     * 将当前列表快照导出为 CSV 文件。
+     *
+     * @param snapshotFile 快照文件
+     */
+    public void exportToCsv(File snapshotFile) {
+        if (snapshotFile == null) {
+            throw new IllegalArgumentException("snapshotFile is null");
+        }
+        if (databaseOpt == null || columns == null || columns.isEmpty()) {
+            throw new IllegalStateException("列表尚未初始化，无法导出快照");
+        }
+        restoreCacheToDB();
+        try (BufferedWriter writer = Files.newBufferedWriter(snapshotFile.toPath(), StandardCharsets.UTF_8)) {
+            for (int i = 0; i < columns.size(); i++) {
+                if (i > 0) {
+                    writer.write(',');
+                }
+                writer.write(escapeCsv(columns.get(i).getColumnName()));
+            }
+            writer.newLine();
+            for (int i = 0; i < size(); i++) {
+                T value = get(i);
+                for (int j = 0; j < columns.size(); j++) {
+                    if (j > 0) {
+                        writer.write(',');
+                    }
+                    LocalColumn column = columns.get(j);
+                    Object fieldValue = resolveFieldValue(value, column);
+                    writer.write(escapeCsv(toStoredValue(fieldValue)));
+                }
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("导出CSV快照失败", e);
+        }
+    }
+
+    /**
+     * 从 CSV 快照恢复列表，恢复前会先清空当前列表。
+     *
+     * @param snapshotFile 快照文件
+     */
+    public void importFromCsv(File snapshotFile) {
+        if (snapshotFile == null) {
+            throw new IllegalArgumentException("snapshotFile is null");
+        }
+        if (databaseOpt == null || columns == null || columns.isEmpty()) {
+            throw new IllegalStateException("列表尚未初始化，无法恢复快照");
+        }
+        if (!snapshotFile.exists()) {
+            throw new IllegalArgumentException("快照文件不存在: " + snapshotFile);
+        }
+        clear();
+        try (BufferedReader reader = Files.newBufferedReader(snapshotFile.toPath(), StandardCharsets.UTF_8)) {
+            String header = reader.readLine();
+            if (header == null) {
+                return;
+            }
+            List<String> schema = Arrays.asList(parseCsvLine(header));
+            if (schema.size() != columns.size()) {
+                throw new IllegalArgumentException("快照 schema 与当前列表结构不一致");
+            }
+            for (int i = 0; i < columns.size(); i++) {
+                if (!columns.get(i).getColumnName().equals(schema.get(i))) {
+                    throw new IllegalArgumentException("快照 schema 与当前列表结构不一致");
+                }
+            }
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.isBlank()) {
+                    continue;
+                }
+                List<String> row = Arrays.asList(parseCsvLine(line));
+                add(createRecordFromSnapshot(row));
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("读取CSV快照失败", e);
+        }
+    }
+
+    private String[] parseCsvLine(String line) {
+        List<String> values = new ArrayList<>();
+        StringBuilder value = new StringBuilder();
+        boolean inQuote = false;
+        for (int i = 0; i < line.length(); i++) {
+            char ch = line.charAt(i);
+            if (ch == '"') {
+                if (inQuote && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    value.append('"');
+                    i++;
+                    continue;
+                }
+                inQuote = !inQuote;
+                continue;
+            }
+            if (ch == ',' && !inQuote) {
+                values.add(value.toString());
+                value.setLength(0);
+            } else {
+                value.append(ch);
+            }
+        }
+        values.add(value.toString());
+        return values.toArray(new String[0]);
+    }
+
+    private T createRecordFromSnapshot(List<String> row) {
+        if (columns.isEmpty()) {
+            throw new IllegalStateException("列表未初始化");
+        }
+        if (row.size() != columns.size()) {
+            throw new IllegalArgumentException("快照行列数与当前列表结构不一致");
+        }
+        if (columns.size() == 1 && columns.get(0).getField() == null) {
+            return parseSimpleValue(row.get(0), columns.get(0).getColumnType());
+        }
+        Class<?> valueClass = columns.get(0).getField().getDeclaringClass();
+        Object bean;
+        try {
+            bean = valueClass.getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+            throw new RuntimeException("对象实例化失败: " + valueClass, e);
+        }
+        for (int i = 0; i < columns.size(); i++) {
+            LocalColumn column = columns.get(i);
+            if (column.getField() == null) {
+                continue;
+            }
+            try {
+                column.getField().setAccessible(true);
+                column.getField().set(bean, parseSimpleValue(row.get(i), column.getField().getType()));
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException("恢复字段失败: " + column.getColumnName(), e);
+            }
+        }
+        @SuppressWarnings("unchecked")
+        T value = (T) bean;
+        return value;
+    }
+
+    @SuppressWarnings("unchecked")
+    private T parseSimpleValue(String raw, Class<?> targetType) {
+        if (raw == null || raw.isEmpty()) {
+            return (T) null;
+        }
+        Object parsed;
+        if (targetType == String.class) {
+            parsed = raw;
+        } else if (targetType == int.class || targetType == Integer.class) {
+            parsed = Integer.valueOf(raw);
+        } else if (targetType == long.class || targetType == Long.class) {
+            parsed = Long.valueOf(raw);
+        } else if (targetType == double.class || targetType == Double.class) {
+            parsed = Double.valueOf(raw);
+        } else if (targetType == float.class || targetType == Float.class) {
+            parsed = Float.valueOf(raw);
+        } else if (targetType == boolean.class || targetType == Boolean.class) {
+            parsed = Boolean.valueOf(raw);
+        } else if (targetType == char.class || targetType == Character.class) {
+            parsed = raw.isEmpty() ? null : raw.charAt(0);
+        } else if (targetType == Date.class) {
+            parsed = new Date(Long.parseLong(raw));
+        } else if (targetType == BigDecimal.class) {
+            parsed = new BigDecimal(raw);
+        } else {
+            throw new UnsupportedOperationException("不支持类型恢复: " + targetType);
+        }
+        return (T) parsed;
+    }
+
+    private String toStoredValue(Object value) {
+        if (value == null) {
+            return "";
+        }
+        if (value instanceof Date) {
+            return Long.toString(((Date) value).getTime());
+        }
+        if (value instanceof java.sql.Date) {
+            return Long.toString(((java.sql.Date) value).getTime());
+        }
+        return String.valueOf(value);
+    }
+
+    private Object resolveFieldValue(T value, LocalColumn column) {
+        if (columns.size() == 1 && column.getField() == null) {
+            return value;
+        }
+        try {
+            if (column.getField() != null) {
+                column.getField().setAccessible(true);
+                return column.getField().get(value);
+            }
+            return null;
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("读取字段失败: " + column.getColumnName(), e);
+        }
+    }
+
+    private String escapeCsv(String text) {
+        if (text == null) {
+            return "";
+        }
+        String escaped = text.replace("\"", "\"\"");
+        boolean needQuote = escaped.contains(",") || escaped.contains("\"") || escaped.contains("\n") || escaped.contains("\r");
+        if (needQuote) {
+            return "\"" + escaped + "\"";
+        }
+        return escaped;
+    }
+
+    private String escapeJson(String text) {
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            switch (ch) {
+                case '"':
+                    result.append("\\\"");
+                    break;
+                case '\\':
+                    result.append("\\\\");
+                    break;
+                case '\n':
+                    result.append("\\n");
+                    break;
+                case '\r':
+                    result.append("\\r");
+                    break;
+                case '\t':
+                    result.append("\\t");
+                    break;
+                default:
+                    result.append(ch);
+                    break;
+            }
+        }
+        return result.toString();
+    }
+
+    private static class SnapshotRows {
+        final String[] columnNames;
+        final List<List<String>> rows;
+
+        SnapshotRows(String[] columnNames, List<List<String>> rows) {
+            this.columnNames = columnNames;
+            this.rows = rows;
+        }
+    }
+
+    private SnapshotRows parseJsonSnapshot(String text) {
+        JsonParser parser = new JsonParser(text);
+        return parser.parse();
+    }
+
+    private static class JsonParser {
+        private final String text;
+        private int idx;
+
+        private JsonParser(String text) {
+            this.text = text;
+        }
+
+        SnapshotRows parse() {
+            skipWs();
+            consume('{');
+            skipWs();
+            consumeKey("schema");
+            skipWs();
+            consume(':');
+            skipWs();
+            String[] schema = parseStringArray();
+            skipWs();
+            consume(',');
+            skipWs();
+            consumeKey("rows");
+            skipWs();
+            consume(':');
+            skipWs();
+            List<List<String>> rows = parseRows();
+            skipWs();
+            consume('}');
+            return new SnapshotRows(schema, rows);
+        }
+
+        private List<List<String>> parseRows() {
+            List<List<String>> rows = new ArrayList<>();
+            consume('[');
+            skipWs();
+            if (peek() == ']') {
+                idx++;
+                return rows;
+            }
+            while (true) {
+                skipWs();
+                List<String> row = parseStringArray();
+                rows.add(row);
+                skipWs();
+                char ch = peek();
+                if (ch == ',') {
+                    idx++;
+                    continue;
+                }
+                consume(']');
+                return rows;
+            }
+        }
+
+        private String[] parseStringArray() {
+            consume('[');
+            skipWs();
+            List<String> values = new ArrayList<>();
+            if (peek() == ']') {
+                idx++;
+                return new String[0];
+            }
+            while (true) {
+                skipWs();
+                if (startsWith("null")) {
+                    idx += 4;
+                    values.add(null);
+                } else {
+                    values.add(parseJsonString());
+                }
+                skipWs();
+                char ch = peek();
+                if (ch == ',') {
+                    idx++;
+                    continue;
+                }
+                consume(']');
+                return values.toArray(new String[0]);
+            }
+        }
+
+        private String parseJsonString() {
+            consume('"');
+            StringBuilder result = new StringBuilder();
+            while (idx < text.length()) {
+                char ch = text.charAt(idx++);
+                if (ch == '\\') {
+                    char next = text.charAt(idx++);
+                    switch (next) {
+                        case '"':
+                            result.append('"');
+                            break;
+                        case '\\':
+                            result.append('\\');
+                            break;
+                        case 'n':
+                            result.append('\n');
+                            break;
+                        case 'r':
+                            result.append('\r');
+                            break;
+                        case 't':
+                            result.append('\t');
+                            break;
+                        default:
+                            result.append(next);
+                            break;
+                    }
+                    continue;
+                }
+                if (ch == '"') {
+                    return result.toString();
+                }
+                result.append(ch);
+            }
+            throw new IllegalArgumentException("JSON 字符串解析失败");
+        }
+
+        private void skipWs() {
+            while (idx < text.length()) {
+                char ch = text.charAt(idx);
+                if (ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t') {
+                    idx++;
+                } else {
+                    return;
+                }
+            }
+        }
+
+        private char peek() {
+            if (idx >= text.length()) {
+                throw new IllegalArgumentException("意外结束");
+            }
+            return text.charAt(idx);
+        }
+
+        private boolean startsWith(String target) {
+            return idx + target.length() <= text.length() && text.startsWith(target, idx);
+        }
+
+        private void consume(char ch) {
+            if (idx >= text.length() || text.charAt(idx) != ch) {
+                throw new IllegalArgumentException("预期 '" + ch + "' 在 " + idx);
+            }
+            idx++;
+        }
+
+        private void consumeKey(String key) {
+            String wrapped = "\"" + key + "\"";
+            if (!text.startsWith(wrapped, idx)) {
+                throw new IllegalArgumentException("预期 key: " + key);
+            }
+            idx += wrapped.length();
+        }
+
+        private void consume(String token) {
+            if (!startsWith(token)) {
+                throw new IllegalArgumentException("预期 token: " + token);
+            }
+            idx += token.length();
         }
     }
 

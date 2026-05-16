@@ -292,7 +292,7 @@ This keeps each compound operation locked only for the smallest required scope w
 - [x] Add observable runtime metrics (cache hit rate, cache size, flush count/time, db size)
 - [ ] Add failure recovery strategy for DB corruption / partial writes / abnormal shutdown
 - [x] Add configurable write strategy controls (flush interval, flush chunk size, index/create flags)
-- [ ] Add snapshot/import/export support (JSON/CSV) and backup restore workflow
+- [x] Add snapshot/import/export support (JSON/CSV) and backup restore workflow
 - [ ] Add pluggable serialization path for non-native types (e.g. JSON serializer)
 - [ ] Add Spring Boot integration starter and auto-configuration docs
 - [x] Expand `Synchronized*` wrappers with atomic batch operations

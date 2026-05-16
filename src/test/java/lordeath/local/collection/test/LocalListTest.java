@@ -10,6 +10,8 @@ import lordeath.local.collection.LocalMap;
 import org.apache.commons.lang3.reflect.FieldUtils;
 
 import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -36,6 +38,7 @@ public class LocalListTest {
         testSubListDbValidation();
         testPkWithRemoveFlag();
         testRuntimeMetrics();
+        testSnapshotImportExport();
     }
 
     @SuppressWarnings("ConstantValue")
@@ -483,6 +486,55 @@ public class LocalListTest {
                 list.remove(2);
                 assertEquals(2, list.size());
                 assertEquals(4, metrics.getDatabaseWriteOps());
+            }
+        });
+    }
+
+    private static void testSnapshotImportExport() {
+        withCacheSize(0, () -> {
+            try (LocalList<TestBean1> list = new LocalList<>(TestBean1.class)) {
+                list.add(new TestBean1("Jack", 26));
+                list.add(new TestBean1("Rose", 25));
+
+                Path json = Files.createTempFile("local-list-snapshot", ".json");
+                list.exportToJson(json.toFile());
+                list.clear();
+                assertEquals(0, list.size());
+                list.importFromJson(json.toFile());
+                assertEquals(2, list.size());
+                assertEquals("Jack", list.get(0).name);
+                assertEquals("Rose", list.get(1).name);
+                assertEquals(26, list.get(0).age);
+                assertEquals(25, list.get(1).age);
+
+                Path csv = Files.createTempFile("local-list-snapshot", ".csv");
+                list.exportToCsv(csv.toFile());
+                list.clear();
+                list.importFromCsv(csv.toFile());
+                assertEquals(2, list.size());
+                assertEquals("Jack", list.get(0).name);
+                assertEquals("Rose", list.get(1).name);
+                Files.deleteIfExists(json);
+                Files.deleteIfExists(csv);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        withCacheSize(0, () -> {
+            try (LocalList<String> list = new LocalList<>(String.class)) {
+                list.add("a");
+                list.add("b");
+                Path json = Files.createTempFile("local-list-snapshot-string", ".json");
+                list.exportToJson(json.toFile());
+                list.clear();
+                list.importFromJson(json.toFile());
+                assertEquals(2, list.size());
+                assertEquals("a", list.get(0));
+                assertEquals("b", list.get(1));
+                Files.deleteIfExists(json);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
         });
     }
