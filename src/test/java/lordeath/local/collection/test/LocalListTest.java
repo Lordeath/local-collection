@@ -260,6 +260,13 @@ public class LocalListTest {
             assertTrue(map.removeIfEquals("c", "4"));
             assertEquals(2, map.size());
             assertNull(map.get("c"));
+            java.util.Map<String, String> batch = new java.util.HashMap<>();
+            batch.put("b", "2");
+            batch.put("c", "3");
+            map.put("b", "1");
+            map.putAllIfAbsent(batch);
+            assertEquals("1", map.get("b"));
+            assertEquals("3", map.get("c"));
         }
 
         try (SynchronizedLocalMap<String, String> synchronizedMap = LocalMap.synchronizedMap(new LocalMap<>())) {
@@ -271,6 +278,13 @@ public class LocalListTest {
             assertTrue(synchronizedMap.removeIfEquals("a", "1"));
             assertEquals(0, synchronizedMap.size());
             assertNull(synchronizedMap.get("a"));
+            java.util.Map<String, String> syncBatch = new java.util.HashMap<>();
+            syncBatch.put("a", "2");
+            syncBatch.put("b", "1");
+            synchronizedMap.put("a", "1");
+            synchronizedMap.putAllIfAbsent(syncBatch);
+            assertEquals("1", synchronizedMap.get("a"));
+            assertEquals("1", synchronizedMap.get("b"));
         }
 
     }

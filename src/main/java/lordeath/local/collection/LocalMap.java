@@ -203,6 +203,12 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
             put(entry.getKey(), entry.getValue());
         }
     }
+    public void putAllIfAbsent(Map<? extends K, ? extends V> m) {
+        for (Entry<? extends K, ? extends V> entry : m.entrySet()) {
+            putIfAbsent(entry.getKey(), entry.getValue());
+        }
+    }
+
 
     @Override
     public void clear() {

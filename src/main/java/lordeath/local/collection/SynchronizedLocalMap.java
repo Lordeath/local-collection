@@ -93,6 +93,14 @@ public final class SynchronizedLocalMap<K extends String, V> implements Map<K, V
         }
     }
 
+    public void putAllIfAbsent(Map<? extends K, ? extends V> m) {
+        synchronized (mutex) {
+            for (Entry<? extends K, ? extends V> entry : m.entrySet()) {
+                putIfAbsent(entry.getKey(), entry.getValue());
+            }
+        }
+    }
+
     @Override
     public void clear() {
         synchronized (mutex) {
