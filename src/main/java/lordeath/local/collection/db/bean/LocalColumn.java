@@ -1,6 +1,7 @@
 package lordeath.local.collection.db.bean;
 
 import lombok.Data;
+import lordeath.local.collection.serialize.TypeCodec;
 
 import java.lang.reflect.Field;
 
@@ -15,6 +16,8 @@ public class LocalColumn {
     private final String dbType;
     // 用于反射获取字段值
     private final Field field;
+    // 对非原生类型的序列化/反序列化支持
+    private final TypeCodec typeCodec;
 
     /**
      * 数据库列定义类
@@ -26,9 +29,14 @@ public class LocalColumn {
      * @param field      用于反射的字段
      */
     public LocalColumn(String columnName, Class<?> columnType, String dbType, Field field) {
+        this(columnName, columnType, dbType, field, null);
+    }
+
+    public LocalColumn(String columnName, Class<?> columnType, String dbType, Field field, TypeCodec typeCodec) {
         this.columnName = columnName;
         this.columnType = columnType;
         this.dbType = dbType;
         this.field = field;
+        this.typeCodec = typeCodec;
     }
 }

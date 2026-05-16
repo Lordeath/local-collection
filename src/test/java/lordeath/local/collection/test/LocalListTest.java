@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lordeath.local.collection.LocalList;
 import lordeath.local.collection.LocalMap;
+import lordeath.local.collection.serialize.TypeCodec;
+import lordeath.local.collection.serialize.TypeCodecRegistry;
 import org.apache.commons.lang3.reflect.FieldUtils;
 
 import java.io.Serializable;
@@ -39,6 +41,7 @@ public class LocalListTest {
         testPkWithRemoveFlag();
         testRuntimeMetrics();
         testSnapshotImportExport();
+        testPluggableSerialization();
         testRecoveryStateApi();
     }
 
@@ -540,6 +543,63 @@ public class LocalListTest {
         });
     }
 
+    private static void testPluggableSerialization() {
+        withCacheSize(0, () -> {
+            TypeCodecRegistry.clear();
+            try {
+                TypeCodec pointCodec = new TypeCodec() {
+                    @Override
+                    public boolean supports(Class<?> javaType) {
+                        return javaType == GeoPoint.class;
+                    }
+
+                    @Override
+                    public String serialize(Object value) {
+                        if (value == null) {
+                            return null;
+                        }
+                        GeoPoint point = (GeoPoint) value;
+                        return point.getX() + "," + point.getY();
+                    }
+
+                    @Override
+                    public Object deserialize(String rawString, Class<?> targetType) {
+                        if (rawString == null || rawString.isEmpty()) {
+                            return null;
+                        }
+                        String[] parts = rawString.split(",");
+                        return new GeoPoint(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
+                    }
+
+                    @Override
+                    public String getDbType() {
+                        return "VARCHAR";
+                    }
+                };
+                TypeCodecRegistry.register(pointCodec);
+
+                try (LocalList<CustomTypeBean> list = new LocalList<>(CustomTypeBean.class)) {
+                    list.add(new CustomTypeBean("center", new GeoPoint(10, 20)));
+                    list.add(new CustomTypeBean("edge", new GeoPoint(0, -1)));
+
+                    assertEquals("center", list.get(0).name);
+                    assertEquals(new GeoPoint(10, 20), list.get(0).point);
+                    assertEquals(new GeoPoint(0, -1), list.get(1).point);
+                }
+
+                try (LocalMap<String, GeoPoint> map = new LocalMap<>()) {
+                    assertNull(map.put("a", new GeoPoint(1, 2)));
+                    assertEquals(new GeoPoint(1, 2), map.get("a"));
+                    assertEquals("a", map.keySet().iterator().next());
+                    assertEquals(new GeoPoint(1, 2), map.put("a", new GeoPoint(3, 4)));
+                    assertEquals(new GeoPoint(3, 4), map.get("a"));
+                }
+            } finally {
+                TypeCodecRegistry.clear();
+            }
+        });
+    }
+
     private static void testRecoveryStateApi() {
         withCacheSize(0, () -> {
             try (LocalList<String> list = new LocalList<>(String.class)) {
@@ -588,5 +648,21 @@ public class LocalListTest {
         private int age;
         private Date birthTime;
         private BigDecimal money;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CustomTypeBean {
+        private String name;
+        private GeoPoint point;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GeoPoint {
+        private int x;
+        private int y;
     }
 }

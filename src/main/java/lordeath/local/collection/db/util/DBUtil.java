@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import lordeath.local.collection.db.bean.LocalColumn;
 import lordeath.local.collection.db.bean.LocalColumnForMap;
 import lordeath.local.collection.db.config.MainConfig;
+import lordeath.local.collection.serialize.TypeCodec;
+import lordeath.local.collection.serialize.TypeCodecRegistry;
 
 import javax.sql.DataSource;
 import java.lang.reflect.Field;
@@ -55,12 +57,12 @@ public class DBUtil {
             for (LocalColumn column : columns) {
                 if (column.getField() == null && columns.size() == 1) {
                     // 特殊情况：如果只有一个列且field为null，直接使用对象本身作为值
-                    stmt.setObject(parameterIndex++, obj);
+                    stmt.setObject(parameterIndex++, toDbValue(column, obj));
                 } else {
                     Field field = column.getField();
                     field.setAccessible(true);
                     Object value = field.get(obj);
-                    stmt.setObject(parameterIndex++, value);
+                    stmt.setObject(parameterIndex++, toDbValue(column, value));
                 }
             }
             return stmt.executeUpdate() > 0;
@@ -97,19 +99,19 @@ public class DBUtil {
         try (Connection connection = dataSource.getConnection();
              PreparedStatement stmt = connection.prepareStatement(sql.toString())) {
             connection.setAutoCommit(false);
-            for (T obj : c) {
-                int parameterIndex = 1;
-                for (LocalColumn column : columns) {
-                    if (column.getField() == null && columns.size() == 1) {
-                        // 特殊情况：如果只有一个列且field为null，直接使用对象本身作为值
-                        stmt.setObject(parameterIndex++, obj);
-                    } else {
-                        Field field = column.getField();
-                        field.setAccessible(true);
-                        Object value = field.get(obj);
-                        stmt.setObject(parameterIndex++, value);
+                for (T obj : c) {
+                    int parameterIndex = 1;
+                    for (LocalColumn column : columns) {
+                        if (column.getField() == null && columns.size() == 1) {
+                            // 特殊情况：如果只有一个列且field为null，直接使用对象本身作为值
+                            stmt.setObject(parameterIndex++, toDbValue(column, obj));
+                        } else {
+                            Field field = column.getField();
+                            field.setAccessible(true);
+                            Object value = field.get(obj);
+                            stmt.setObject(parameterIndex++, toDbValue(column, value));
+                        }
                     }
-                }
                 stmt.addBatch();
             }
             int[] results = stmt.executeBatch();
@@ -217,28 +219,7 @@ public class DBUtil {
             try (ResultSet resultSet = stmt.executeQuery()) {
                 if (columns.size() == 1 && columns.get(0).getField() == null) {
                     while (resultSet.next()) {
-                        if (clazz == String.class) {
-                            result.add(clazz.cast(resultSet.getString(columns.get(0).getColumnName())));
-                        } else if (clazz == Integer.class) {
-                            result.add(clazz.cast(resultSet.getInt(columns.get(0).getColumnName())));
-                        } else if (clazz == Long.class) {
-                            result.add(clazz.cast(resultSet.getLong(columns.get(0).getColumnName())));
-                        } else if (clazz == Double.class) {
-                            result.add(clazz.cast(resultSet.getDouble(columns.get(0).getColumnName())));
-                        } else if (clazz == Float.class) {
-                            result.add(clazz.cast(resultSet.getFloat(columns.get(0).getColumnName())));
-                        } else if (clazz == Boolean.class) {
-                            result.add(clazz.cast(resultSet.getBoolean(columns.get(0).getColumnName())));
-                        } else if (clazz == Character.class) {
-                            result.add(clazz.cast(resultSet.getString(columns.get(0).getColumnName()).charAt(0)));
-                        } else if (clazz == Date.class) {
-                            Object dateInDb = resultSet.getObject(columns.get(0).getColumnName());
-                            result.add(clazz.cast(convertObjectToDate(dateInDb)));
-                        } else if (clazz == BigDecimal.class) {
-                            result.add(clazz.cast(resultSet.getBigDecimal(columns.get(0).getColumnName())));
-                        } else {
-                            throw new RuntimeException("不支持的类型: " + clazz);
-                        }
+                        result.add(clazz.cast(fromDbValue(resultSet, columns.get(0), clazz)));
                     }
                 } else {
                     while (resultSet.next()) {
@@ -247,7 +228,7 @@ public class DBUtil {
                         for (LocalColumn column : columns) {
                             if (column.getField() != null) {
                                 column.getField().setAccessible(true);
-                                Object value = resultSet.getObject(column.getColumnName());
+                                Object value = fromDbValue(resultSet, column, column.getField().getType());
                                 if (value != null) {
                                     column.getField().set(obj, value);
                                 }
@@ -298,92 +279,31 @@ public class DBUtil {
              Statement statement = connection.createStatement()) {
             ResultSet resultSet = statement.executeQuery(sql);
             if (columns.size() == 2 && columns.get(1).getField() == null && columns.get(0).getColumnName().startsWith("key_")) {
-                // map来获取列时，直接使用列的名称即可
-                if (resultSet.next()) {
-                    if (clazz == String.class) {
-                        return (T) resultSet.getString(columns.get(1).getColumnName());
-                    } else if (clazz == Integer.class) {
-                        return (T) Integer.valueOf(resultSet.getInt(columns.get(1).getColumnName()));
-                    } else if (clazz == Long.class) {
-                        return (T) Long.valueOf(resultSet.getLong(columns.get(1).getColumnName()));
-                    } else if (clazz == Double.class) {
-                        return (T) Double.valueOf(resultSet.getDouble(columns.get(1).getColumnName()));
-                    } else if (clazz == Float.class) {
-                        return (T) Float.valueOf(resultSet.getFloat(columns.get(1).getColumnName()));
-                    } else if (clazz == Boolean.class) {
-                        return (T) Boolean.valueOf(resultSet.getBoolean(columns.get(1).getColumnName()));
-                    } else if (clazz == Character.class) {
-                        return (T) Character.valueOf(resultSet.getString(columns.get(1).getColumnName()).charAt(0));
-                    } else if (clazz == Date.class) {
-                        Object dateInDb = resultSet.getObject(columns.get(1).getColumnName());
-                        return (T) convertObjectToDate(dateInDb);
-                    } else if (clazz == BigDecimal.class) {
-                        return (T) resultSet.getBigDecimal(columns.get(1).getColumnName());
-                    } else {
-                        throw new RuntimeException("不支持的类型: " + clazz);
+                    // map来获取列时，直接使用列的名称即可
+                    if (resultSet.next()) {
+                        return clazz.cast(fromDbValue(resultSet, columns.get(1), clazz));
                     }
+                    return null;
                 }
-                return null;
-            }
-            if (columns.size() == 1 && columns.get(0).getField() == null) {
-                // 说明是简单数据，直接返回
-                if (resultSet.next()) {
-                    if (clazz == String.class) {
-                        return (T) resultSet.getString(columns.get(0).getColumnName());
-                    } else if (clazz == Integer.class) {
-                        return (T) Integer.valueOf(resultSet.getInt(columns.get(0).getColumnName()));
-                    } else if (clazz == Long.class) {
-                        return (T) Long.valueOf(resultSet.getLong(columns.get(0).getColumnName()));
-                    } else if (clazz == Double.class) {
-                        return (T) Double.valueOf(resultSet.getDouble(columns.get(0).getColumnName()));
-                    } else if (clazz == Float.class) {
-                        return (T) Float.valueOf(resultSet.getFloat(columns.get(0).getColumnName()));
-                    } else if (clazz == Boolean.class) {
-                        return (T) Boolean.valueOf(resultSet.getBoolean(columns.get(0).getColumnName()));
-                    } else if (clazz == Character.class) {
-                        return (T) Character.valueOf(resultSet.getString(columns.get(0).getColumnName()).charAt(0));
-                    } else if (clazz == Date.class) {
-                        Object dateInDb = resultSet.getObject(columns.get(0).getColumnName());
-                        return (T) convertObjectToDate(dateInDb);
-                    } else if (clazz == BigDecimal.class) {
-                        return (T) resultSet.getBigDecimal(columns.get(0).getColumnName());
-                    } else {
-                        throw new RuntimeException("不支持的类型: " + clazz);
+                if (columns.size() == 1 && columns.get(0).getField() == null) {
+                    // 说明是简单数据，直接返回
+                    if (resultSet.next()) {
+                        return clazz.cast(fromDbValue(resultSet, columns.get(0), clazz));
                     }
-                }
-            } else {
-                if (resultSet.next()) {
-                    T t = clazz.getDeclaredConstructor().newInstance();
-                    // 通过sql的返回结果，使用反射来填充这些字段
-                    for (LocalColumn column : columns) {
-                        Field field = column.getField();
-                        field.setAccessible(true);
-                        if (column.getColumnType() == String.class) {
-                            field.set(t, resultSet.getString(column.getColumnName()));
-                        } else if (column.getColumnType() == Integer.class) {
-                            field.set(t, resultSet.getInt(column.getColumnName()));
-                        } else if (column.getColumnType() == Long.class) {
-                            field.set(t, resultSet.getLong(column.getColumnName()));
-                        } else if (column.getColumnType() == Double.class) {
-                            field.set(t, resultSet.getDouble(column.getColumnName()));
-                        } else if (column.getColumnType() == Float.class) {
-                            field.set(t, resultSet.getFloat(column.getColumnName()));
-                        } else if (column.getColumnType() == Boolean.class) {
-                            field.set(t, resultSet.getBoolean(column.getColumnName()));
-                        } else if (column.getColumnType() == Character.class) {
-                            field.set(t, resultSet.getString(column.getColumnName()).charAt(0));
-                        } else if (column.getColumnType() == Date.class) {
-                            Object dateInDb = resultSet.getObject(column.getColumnName());
-                            Date date = convertObjectToDate(dateInDb);
-                            field.set(t, date);
-                        } else if (column.getColumnType() == BigDecimal.class) {
-                            field.set(t, resultSet.getBigDecimal(column.getColumnName()));
-                        } else {
-                            throw new RuntimeException("不支持的类型: " + column.getColumnType());
+                } else {
+                    if (resultSet.next()) {
+                        T t = clazz.getDeclaredConstructor().newInstance();
+                        // 通过sql的返回结果，使用反射来填充这些字段
+                        for (LocalColumn column : columns) {
+                            Field field = column.getField();
+                            field.setAccessible(true);
+                            Object value = fromDbValue(resultSet, column, column.getField().getType());
+                            if (value != null) {
+                                field.set(t, value);
+                            }
                         }
+                        return t;
                     }
-                    return t;
-                }
             }
             return null;
 
@@ -484,12 +404,12 @@ public class DBUtil {
             for (LocalColumn column : columns) {
                 if (column.getField() == null && columns.size() == 1) {
                     // 特殊情况：如果只有一个列且field为null，直接使用对象本身作为值
-                    stmt.setObject(parameterIndex++, element);
+                    stmt.setObject(parameterIndex++, toDbValue(column, element));
                 } else {
                     Field field = column.getField();
                     field.setAccessible(true);
                     Object value = field.get(element);
-                    stmt.setObject(parameterIndex++, value);
+                    stmt.setObject(parameterIndex++, toDbValue(column, value));
                 }
             }
             stmt.setLong(parameterIndex, pk);
@@ -534,17 +454,91 @@ public class DBUtil {
         }
     }
 
+    private static Object toDbValue(LocalColumn column, Object value) {
+        if (value == null) {
+            return null;
+        }
+        TypeCodec codec = column.getTypeCodec();
+        if (codec != null) {
+            return codec.serialize(value);
+        }
+        return value;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T fromDbValue(ResultSet resultSet, LocalColumn column, Class<T> targetType) throws SQLException {
+        Object raw = resultSet.getObject(column.getColumnName());
+        if (raw == null) {
+            return null;
+        }
+        TypeCodec codec = column.getTypeCodec();
+        if (codec != null) {
+            return (T) codec.deserialize(String.valueOf(raw), targetType);
+        }
+        return (T) convertStandardValue(raw, targetType);
+    }
+
+    private static Object convertStandardValue(Object raw, Class<?> targetType) {
+        if (targetType == String.class) {
+            return String.valueOf(raw);
+        }
+        if (targetType == Integer.class || targetType == int.class) {
+            if (raw instanceof Number) {
+                return ((Number) raw).intValue();
+            }
+            return Integer.valueOf(raw.toString());
+        }
+        if (targetType == Long.class || targetType == long.class) {
+            if (raw instanceof Number) {
+                return ((Number) raw).longValue();
+            }
+            return Long.valueOf(raw.toString());
+        }
+        if (targetType == Double.class || targetType == double.class) {
+            if (raw instanceof Number) {
+                return ((Number) raw).doubleValue();
+            }
+            return Double.valueOf(raw.toString());
+        }
+        if (targetType == Float.class || targetType == float.class) {
+            if (raw instanceof Number) {
+                return ((Number) raw).floatValue();
+            }
+            return Float.valueOf(raw.toString());
+        }
+        if (targetType == Boolean.class || targetType == boolean.class) {
+            if (raw instanceof Boolean) {
+                return raw;
+            }
+            return Boolean.valueOf(raw.toString());
+        }
+        if (targetType == Character.class || targetType == char.class) {
+            String text = String.valueOf(raw);
+            return text.isEmpty() ? null : text.charAt(0);
+        }
+        if (targetType == Date.class) {
+            return convertObjectToDate(raw);
+        }
+        if (targetType == BigDecimal.class) {
+            if (raw instanceof BigDecimal) {
+                return raw;
+            }
+            return new BigDecimal(raw.toString());
+        }
+        return raw;
+    }
+
     @SuppressWarnings("unchecked")
     private static <T> T createInstance(ResultSet rs, List<LocalColumn> columns, Class<T> clazz)
             throws Exception {
         if (columns.size() == 2 && columns.get(1).getField() == null && columns.get(0).getColumnName().startsWith("key_")) {
-            return (T) rs.getObject(columns.get(1).getColumnName());
+            return (T) fromDbValue(rs, columns.get(1), clazz);
         }
         T obj = clazz.getDeclaredConstructor().newInstance();
         for (LocalColumn column : columns) {
             if (column.getField() != null) {
                 column.getField().setAccessible(true);
-                Object value = rs.getObject(column.getColumnName());
+                Object value = fromDbValue(rs, column, column.getField().getType());
                 if (value != null) {
                     column.getField().set(obj, value);
                 }
@@ -642,6 +636,12 @@ public class DBUtil {
             return "BOOLEAN";
         } else if (Date.class.equals(javaType)) {
             return "TIMESTAMP";
+        } else if (BigDecimal.class.equals(javaType)) {
+            return "VARCHAR";
+        }
+        String codecSqlType = TypeCodecRegistry.resolveSqlType(javaType);
+        if (codecSqlType != null) {
+            return codecSqlType;
         }
         return null;
     }
@@ -803,10 +803,10 @@ public class DBUtil {
             for (LocalColumn column : columns) {
                 if (column.getField() == null && columns.size() == 1) {
                     // 特殊情况：如果只有一个列且field为null，直接使用对象本身作为值
-                    stmt.setObject(parameterIndex++, obj);
+                    stmt.setObject(parameterIndex++, toDbValue(column, obj));
                 } else if (column.getField() == null && columns.size() == 2 && !keyColumn.equals(column.getColumnName())) {
                     // 特殊情况：如果只有2个列且field为null，直接使用对象本身作为值
-                    stmt.setObject(parameterIndex++, obj);
+                    stmt.setObject(parameterIndex++, toDbValue(column, obj));
                 } else {
                     if (keyColumn.equals(column.getColumnName())) {
                         stmt.setObject(parameterIndex++, key);
@@ -814,7 +814,7 @@ public class DBUtil {
                         Field field = column.getField();
                         field.setAccessible(true);
                         Object value = field.get(obj);
-                        stmt.setObject(parameterIndex++, value);
+                        stmt.setObject(parameterIndex++, toDbValue(column, value));
                     }
                 }
             }

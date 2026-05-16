@@ -1,6 +1,8 @@
 package lordeath.local.collection.db.util;
 
 import lordeath.local.collection.db.bean.LocalColumn;
+import lordeath.local.collection.serialize.TypeCodec;
+import lordeath.local.collection.serialize.TypeCodecRegistry;
 import org.apache.commons.lang3.reflect.FieldUtils;
 
 import java.lang.reflect.Field;
@@ -88,6 +90,10 @@ public class ColumnNameUtil {
 //                return new LocalColumn(fieldName, BigDecimal.class, "decimal(32,8)", field);
                 return new LocalColumn(fieldName, BigDecimal.class, "VARCHAR", field);
             default:
+                TypeCodec typeCodec = TypeCodecRegistry.resolve(clazz);
+                if (typeCodec != null) {
+                    return new LocalColumn(fieldName, clazz, typeCodec.getDbType(), field, typeCodec);
+                }
                 return null;
         }
     }

@@ -8,6 +8,7 @@ import lordeath.local.collection.db.config.MainConfig;
 import lordeath.local.collection.db.opt.impl.DatabaseFactory;
 import lordeath.local.collection.db.opt.inter.IDatabaseOpt;
 import lordeath.local.collection.db.util.DBUtil;
+import lordeath.local.collection.serialize.TypeCodec;
 
 import javax.sql.DataSource;
 import java.io.BufferedReader;
@@ -23,7 +24,6 @@ import java.lang.ref.Cleaner;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
@@ -848,7 +848,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
                         writer.write("null");
                     } else {
                         writer.write('"');
-                        writer.write(escapeJson(toStoredValue(fieldValue)));
+                        writer.write(escapeJson(toStoredValue(fieldValue, column)));
                         writer.write('"');
                     }
                 }
@@ -925,7 +925,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
                     }
                     LocalColumn column = columns.get(j);
                     Object fieldValue = resolveFieldValue(value, column);
-                    writer.write(escapeCsv(toStoredValue(fieldValue)));
+                    writer.write(escapeCsv(toStoredValue(fieldValue, column)));
                 }
                 writer.newLine();
             }
@@ -1011,7 +1011,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
             throw new IllegalArgumentException("快照行列数与当前列表结构不一致");
         }
         if (columns.size() == 1 && columns.get(0).getField() == null) {
-            return parseSimpleValue(row.get(0), columns.get(0).getColumnType());
+            return parseSimpleValue(row.get(0), columns.get(0));
         }
         Class<?> valueClass = columns.get(0).getField().getDeclaringClass();
         Object bean;
@@ -1027,7 +1027,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
             }
             try {
                 column.getField().setAccessible(true);
-                column.getField().set(bean, parseSimpleValue(row.get(i), column.getField().getType()));
+                column.getField().set(bean, parseSimpleValue(row.get(i), column));
             } catch (IllegalAccessException e) {
                 throw new RuntimeException("恢复字段失败: " + column.getColumnName(), e);
             }
@@ -1038,11 +1038,16 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     }
 
     @SuppressWarnings("unchecked")
-    private T parseSimpleValue(String raw, Class<?> targetType) {
+    private T parseSimpleValue(String raw, LocalColumn column) {
         if (raw == null || raw.isEmpty()) {
             return (T) null;
         }
+        TypeCodec codec = column.getTypeCodec();
+        if (codec != null) {
+            return (T) codec.deserialize(raw, column.getColumnType());
+        }
         Object parsed;
+        Class<?> targetType = column.getColumnType();
         if (targetType == String.class) {
             parsed = raw;
         } else if (targetType == int.class || targetType == Integer.class) {
@@ -1067,9 +1072,16 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         return (T) parsed;
     }
 
-    private String toStoredValue(Object value) {
+    private String toStoredValue(Object value, LocalColumn column) {
         if (value == null) {
             return "";
+        }
+        TypeCodec codec = column.getTypeCodec();
+        if (codec != null) {
+            return codec.serialize(value);
+        }
+        if (value instanceof String) {
+            return value.toString();
         }
         if (value instanceof Date) {
             return Long.toString(((Date) value).getTime());
