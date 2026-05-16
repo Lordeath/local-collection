@@ -149,7 +149,8 @@ public class LocalListTest {
             }
             assertEquals(100, list.subList(0, 100).size());
             for (TestBean1 testBean1 : list.subList(0, 100)) {
-                log.debug("正在内存遍历: {}", testBean1);
+                log.debug("正在�
+存遍历: {}", testBean1);
             }
             assertEquals(99, list.subList(1, 100).size());
             assertEquals(1, list.subList(1, 100).get(0).age);
@@ -189,8 +190,24 @@ public class LocalListTest {
                 assertEquals(0, map.size());
                 map.put("Jack", new TestBean1("Jack", 26));
                 assertEquals(1, map.size());
+            }
 
-
+            try (LocalMap<String, TestBean1> map2 = LocalMap.from(list)
+                    .where("age >= 25")
+                    .groupBy("name", "age")
+                    .select("name", "sum(age) AS age")
+                    .resultClass(TestBean1.class)
+                    .keyField(FieldUtils.getDeclaredField(TestBean1.class, "name", true))
+                    .build()) {
+                assertEquals(2, map2.size());
+                TestBean1 jack = map2.get("Jack.26");
+                assertNotNull(jack);
+                assertEquals("Jack", jack.name);
+                assertEquals(26, jack.age);
+                TestBean1 rose = map2.get("Rose.25");
+                assertNotNull(rose);
+                assertEquals("Rose", rose.name);
+                assertEquals(25, rose.age);
             }
 
         }
