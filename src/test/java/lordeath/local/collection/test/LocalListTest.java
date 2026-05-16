@@ -247,6 +247,30 @@ public class LocalListTest {
 
             assertDoesNotThrow(() -> invokeRemoveByKey(map.getInnerList(), map.getKeyColumn(), "a"));
             assertEquals(0, map.size());
+
+            assertNull(map.putIfAbsent("b", "2"));
+            assertEquals("2", map.get("b"));
+            assertEquals("2", map.putIfAbsent("b", "3"));
+
+            assertNull(map.computeIfAbsent("c", (k) -> "4"));
+            assertEquals("4", map.get("c"));
+            assertEquals("4", map.computeIfAbsent("c", (k) -> "5"));
+
+            assertFalse(map.removeIfEquals("c", "5"));
+            assertTrue(map.removeIfEquals("c", "4"));
+            assertEquals(2, map.size());
+            assertNull(map.get("c"));
+        }
+
+        try (SynchronizedLocalMap<String, String> synchronizedMap = LocalMap.synchronizedMap(new LocalMap<>())) {
+            assertNull(synchronizedMap.putIfAbsent("a", "1"));
+            assertEquals("1", synchronizedMap.get("a"));
+            assertEquals("1", synchronizedMap.putIfAbsent("a", "2"));
+            assertEquals("1", synchronizedMap.computeIfAbsent("a", (k) -> "3"));
+            assertFalse(synchronizedMap.removeIfEquals("a", "2"));
+            assertTrue(synchronizedMap.removeIfEquals("a", "1"));
+            assertEquals(0, synchronizedMap.size());
+            assertNull(synchronizedMap.get("a"));
         }
 
     }

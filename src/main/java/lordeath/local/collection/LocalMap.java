@@ -156,6 +156,47 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
         return value;
     }
 
+
+    @Override
+    public boolean remove(Object key, Object value) {
+        return removeIfEquals(key, value);
+    }
+
+    @Override
+    public V putIfAbsent(K key, V value) {
+        V existing = get(key);
+        if (existing != null) {
+            return existing;
+        }
+        put(key, value);
+        return null;
+    }
+
+    @Override
+    public V computeIfAbsent(K key, java.util.function.Function<? super K, ? extends V> mappingFunction) {
+        V existing = get(key);
+        if (existing != null) {
+            return existing;
+        }
+        V mapped = mappingFunction.apply(key);
+        if (mapped == null) {
+            return null;
+        }
+        return putIfAbsent(key, mapped);
+    }
+
+    public boolean removeIfEquals(Object key, Object value) {
+        V current = get(key);
+        if (current == null) {
+            return false;
+        }
+        if (!java.util.Objects.equals(current, value)) {
+            return false;
+        }
+        innerList.removeByKey(keyColumn, key);
+        return true;
+    }
+
     @Override
     public void putAll(Map<? extends K, ? extends V> m) {
         for (Entry<? extends K, ? extends V> entry : m.entrySet()) {

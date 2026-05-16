@@ -131,7 +131,13 @@ public final class SynchronizedLocalMap<K extends String, V> implements Map<K, V
     @Override
     public boolean remove(Object key, Object value) {
         synchronized (mutex) {
-            return delegate.remove(key, value);
+            return delegate.removeIfEquals(key, value);
+        }
+    }
+
+    public boolean removeIfEquals(Object key, Object value) {
+        synchronized (mutex) {
+            return delegate.removeIfEquals(key, value);
         }
     }
 
