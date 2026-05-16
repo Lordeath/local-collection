@@ -109,6 +109,24 @@ try (LocalMap<String, String> map = new LocalMap<>()) {
 }
 ```
 
+### 线程安全包装（推荐多线程场景）
+
+底层 `LocalList`/`LocalMap` 是非线程安全的，多线程可直接使用静态同步包装入口：
+
+```java
+try (SynchronizedLocalList<String> list = LocalList.synchronizedList(new LocalList<>(String.class))) {
+  list.add("a");
+  list.add("b");
+}
+```
+
+```java
+try (SynchronizedLocalMap<String, String> map = LocalMap.synchronizedMap(new LocalMap<>())) {
+  map.put("a", "1");
+  map.put("a", "2");
+}
+```
+
 ### LocalMap from LocalList（分组）
 
 ```java

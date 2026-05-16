@@ -110,6 +110,24 @@ try (LocalMap<String, String> map = new LocalMap<>()) {
 }
 ```
 
+### Thread-safe wrappers (for multi-threaded use)
+
+`LocalList` / `LocalMap` itself is not thread-safe. For concurrent use, wrap it with synchronized variants:
+
+```java
+try (SynchronizedLocalList<String> list = LocalList.synchronizedList(new LocalList<>(String.class))) {
+  list.add("a");
+  list.add("b");
+}
+```
+
+```java
+try (SynchronizedLocalMap<String, String> map = LocalMap.synchronizedMap(new LocalMap<>())) {
+  map.put("a", "1");
+  map.put("a", "2");
+}
+```
+
 ### LocalMap from list (grouped)
 
 ```java
