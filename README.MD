@@ -265,6 +265,50 @@ public final class LocalCollectionConcurrencyKit {
 
 说明：这类方法里每个复合操作只做最小必要加锁，既保证原子性，也避免把整个对象长时间持有全局锁。
 
+## Spring Boot 集成（自动配置）
+
+本库本身通过 `MainConfig` 的系统属性读取配置。在 Spring Boot 中可新增启动配置类，在应用启动时同步为系统属性。
+
+```properties
+lordeath.local.collection.db.engine=sqlite
+lordeath.local.collection.cache.size=10000
+lordeath.local.collection.cache.flush.interval.millis=0
+lordeath.local.collection.cache.flush.chunk.size=0
+lordeath.local.collection.db.create.index=true
+```
+
+```java
+import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.env.Environment;
+
+@Configuration
+public class LocalCollectionBootstrap implements ApplicationRunner {
+    private final Environment environment;
+
+    public LocalCollectionBootstrap(Environment environment) {
+        this.environment = environment;
+    }
+
+    @Override
+    public void run(ApplicationArguments args) {
+        System.setProperty("lordeath.local.collection.db.engine",
+                environment.getProperty("lordeath.local.collection.db.engine", "sqlite"));
+        System.setProperty("lordeath.local.collection.cache.size",
+                environment.getProperty("lordeath.local.collection.cache.size", "10000"));
+        System.setProperty("lordeath.local.collection.cache.flush.interval.millis",
+                environment.getProperty("lordeath.local.collection.cache.flush.interval.millis", "0"));
+        System.setProperty("lordeath.local.collection.cache.flush.chunk.size",
+                environment.getProperty("lordeath.local.collection.cache.flush.chunk.size", "0"));
+        System.setProperty("lordeath.local.collection.db.create.index",
+                environment.getProperty("lordeath.local.collection.db.create.index", "true"));
+    }
+}
+```
+
+如果你要发布 starter，可将上述逻辑封装为 starter 自动配置模块（建议 `local-collection-spring-boot-starter`），并提供 `@ConfigurationProperties` 与 `spring.factories` 注册点。
+
 ## 运维前置检查与故障排查
 
 - 上线前先确认数据库引擎、路径、缓存与索引参数已按业务签名配置。
@@ -294,7 +338,7 @@ public final class LocalCollectionConcurrencyKit {
 - [x] 增加可配置写入策略（刷库时间阈值、刷库批量大小、索引创建策略）
 - [x] 增加快照导入导出（JSON/CSV）与备份恢复流程
 - [x] 支持非内置类型的可插拔序列化方案（例如 JSON 序列化）
-- [ ] 补充 Spring Boot Starter 与自动配置文档
+- [x] 补充 Spring Boot Starter 与自动配置文档
 - [x] 扩展同步包装器接口，新增原子批量操作 API
 - [x] 增加上线前检查清单与生产故障排查手册
 

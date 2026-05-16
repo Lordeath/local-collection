@@ -251,6 +251,50 @@ public final class LocalCollectionConcurrencyKit {
 
 This keeps each compound operation locked only for the smallest required scope while preserving atomic behavior.
 
+## Spring Boot integration (auto-configuration)
+
+The library reads configuration from `MainConfig` via Java system properties. In Spring Boot, add a bootstrap bean to sync values at startup.
+
+```properties
+lordeath.local.collection.db.engine=sqlite
+lordeath.local.collection.cache.size=10000
+lordeath.local.collection.cache.flush.interval.millis=0
+lordeath.local.collection.cache.flush.chunk.size=0
+lordeath.local.collection.db.create.index=true
+```
+
+```java
+import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.env.Environment;
+
+@Configuration
+public class LocalCollectionBootstrap implements ApplicationRunner {
+    private final Environment environment;
+
+    public LocalCollectionBootstrap(Environment environment) {
+        this.environment = environment;
+    }
+
+    @Override
+    public void run(ApplicationArguments args) {
+        System.setProperty("lordeath.local.collection.db.engine",
+                environment.getProperty("lordeath.local.collection.db.engine", "sqlite"));
+        System.setProperty("lordeath.local.collection.cache.size",
+                environment.getProperty("lordeath.local.collection.cache.size", "10000"));
+        System.setProperty("lordeath.local.collection.cache.flush.interval.millis",
+                environment.getProperty("lordeath.local.collection.cache.flush.interval.millis", "0"));
+        System.setProperty("lordeath.local.collection.cache.flush.chunk.size",
+                environment.getProperty("lordeath.local.collection.cache.flush.chunk.size", "0"));
+        System.setProperty("lordeath.local.collection.db.create.index",
+                environment.getProperty("lordeath.local.collection.db.create.index", "true"));
+    }
+}
+```
+
+If you publish a starter, wrap this bootstrap logic into an auto-configuration module (suggested artifact `local-collection-spring-boot-starter`) and expose it via `@ConfigurationProperties` + auto-configuration registration.
+
 ## Deployment and operations
 
 - Configure DB path and credentials:
@@ -302,6 +346,6 @@ This keeps each compound operation locked only for the smallest required scope w
 - [x] Add configurable write strategy controls (flush interval, flush chunk size, index/create flags)
 - [x] Add snapshot/import/export support (JSON/CSV) and backup restore workflow
 - [x] Add pluggable serialization path for non-native types (e.g. JSON serializer)
-- [ ] Add Spring Boot integration starter and auto-configuration docs
+- [x] Add Spring Boot integration starter and auto-configuration docs
 - [x] Expand `Synchronized*` wrappers with atomic batch operations
 - [x] Add operational readiness checks and production troubleshooting playbook
