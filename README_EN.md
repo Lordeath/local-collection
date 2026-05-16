@@ -270,7 +270,7 @@ This keeps each compound operation locked only for the smallest required scope w
 - [x] Iterator prefetch strategy (`preReadCacheSize = 5000`)
 - [x] Extend operational documentation and deployment guidance
 - [x] Clarify stream usage boundaries
-- [ ] Add SQL dialect compatibility layer for `LocalMap` grouping expressions (SQLite/H2)
+- [x] Add SQL dialect compatibility layer for `LocalMap` grouping expressions (SQLite/H2)
 - [x] Add atomic composite operations for concurrent use (`putIfAbsent`, `computeIfAbsent`, `removeIfEquals`)
 - [x] Expand `LocalList`/`LocalMap` supported APIs and document intentional non-supports with alternatives
 - [x] Add observable runtime metrics (cache hit rate, cache size, flush count/time, db size)

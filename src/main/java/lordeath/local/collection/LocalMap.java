@@ -5,6 +5,8 @@ import lordeath.local.collection.db.bean.LocalColumn;
 import lordeath.local.collection.db.bean.LocalColumnForMap;
 import lordeath.local.collection.db.opt.inter.IDatabaseOpt;
 import lordeath.local.collection.db.util.DBUtil;
+import lordeath.local.collection.db.config.MainConfig;
+import lordeath.local.collection.db.util.SqlDialectUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -395,30 +397,11 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
         }
 
         private String buildGroupByKeyExpression(String keyColumn) {
-            if (groupByColumns.isEmpty()) {
-                return "'' AS " + keyColumn;
-            }
-
             IDatabaseOpt<T> databaseOpt = source.getDatabaseOpt();
-            String engine = databaseOpt == null ? "sqlite" : databaseOpt.getDatabaseEngine();
-            String expression;
-            if ("h2".equalsIgnoreCase(engine)) {
-                if (groupByColumns.size() == 1) {
-                    expression = groupByColumns.get(0);
-                } else {
-                    StringBuilder expressionBuilder = new StringBuilder("CONCAT(");
-                    expressionBuilder.append(groupByColumns.get(0));
-                    for (int i = 1; i < groupByColumns.size(); i++) {
-                        expressionBuilder.append(", '.', ").append(groupByColumns.get(i));
-                    }
-                    expressionBuilder.append(")");
-                    expression = expressionBuilder.toString();
-                }
-            } else {
-                expression = String.join(" || '.' || ", groupByColumns);
-            }
-            return expression + " AS " + keyColumn;
+            String engine = databaseOpt == null ? MainConfig.DB_ENGINE.getProperty() : databaseOpt.getDatabaseEngine();
+            return SqlDialectUtil.buildGroupByKeyExpression(groupByColumns, keyColumn, engine);
         }
+
 
     }
 }
