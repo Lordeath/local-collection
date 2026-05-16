@@ -36,6 +36,12 @@
   - SQLite 连接凭据（如需）
 - `lordeath.local.collection.h2.file.username` / `...password`
   - H2 连接凭据（如需）
+- `lordeath.local.collection.cache.flush.interval.millis`（默认 `0`）
+  - 写入缓冲区刷库间隔（毫秒）；`0` 表示不按间隔刷库。
+- `lordeath.local.collection.cache.flush.chunk.size`（默认 `0`）
+  - 一次 `restoreCacheToDB()` 的分批写入大小；`0` 表示按当前待刷总量一次写入。
+- `lordeath.local.collection.db.create.index`（默认 `true`）
+  - 是否在建表时创建索引，影响查询性能和启动代价。
 
 > `MainConfig` 的配置解析优先级为：`System.getProperty` → `System.getenv` → 默认值。
 
@@ -48,6 +54,18 @@
 - 关键注意事项：读取出的对象（例如 `get`）即使被修改，也不会自动回写，必须通过 `set(index, element)` 持久化。
 - `subList` 在数据库路径下返回的是不可变列表。
 
+#### stream / iterator 使用边界（数据库路径）
+
+- `stream()`、`listIterator()` 可用；`stream()`/`parallelStream()` 适合只做只读遍历的消费场景，不建议在内部复合副作用回写。
+- 复杂遍历建议优先使用 `iterator()` 或 `listIterator()`，避免对数据库侧读取路径形成过度短路行为（例如过早结束时掩盖状态一致性问题）。
+- 任何读取-修改交织操作建议在外层显式加锁（如 `SynchronizedLocalList` 场景）后再执行。
+
+#### 常用 API 扩展与替代路径
+
+- `contains` / `indexOf` / `lastIndexOf` / `remove(Object)`：建议改为 `iterator()` 遍历定位后再 `set(index, value)` 或 `remove(index)`。
+- `add(index, element)`、`removeAll`、`retainAll`：库内未实现，请通过重建列表或外部流处理后回填。
+- 对于需要大量中间变更的场景，建议先 `exportToJson/CSV` 做离线变换，再 `import` 回库。
+
 ### LocalMap（`Map`）
 
 - 构造方式：
@@ -56,6 +74,11 @@
 - `put` 返回旧值；`remove` 返回被删值。
 - `keySet()`、`entrySet()`、`values()` 基于底层数据库查询实现。
 - 未覆盖全部 `Map` 的语义优化，适合以数据库持久化为主的场景。
+
+#### 并发场景可用原子复合 API
+
+- `LocalMap` 已提供：`putIfAbsent`、`computeIfAbsent`、`removeIfEquals`。
+- 建议与 `SynchronizedLocalMap` 的 `getMutex()` 配合使用，保证 check-then-act 语义的原子性。
 
 ## 类型持久化能力
 
@@ -261,14 +284,14 @@ public final class LocalCollectionConcurrencyKit {
 - [x] 分层缓存与批量刷库策略
 - [x] 启动初始化清理与应用名目录隔离
 - [x] 读缓存与迭代预读策略（`preReadCacheSize = 5000`）
-- [ ] 继续补齐文档与可运维参数说明
-- [ ] 更细化的 stream / iterator 使用边界说明
+- [x] 继续补齐文档与可运维参数说明
+- [x] 更细化的 stream / iterator 使用边界说明
 - [x] 为 `LocalMap` 聚合提供 SQL 方言兼容层（SQLite / H2）
-- [ ] 增加并发场景下可用的复合原子方法（如 `putIfAbsent`、`computeIfAbsent`、`removeIfEquals`）
-- [ ] 扩展 `LocalList`/`LocalMap` 常用 API 覆盖，并明确不支持方法的替代路径
-- [ ] 增加运行时可观测指标（缓存命中率、缓存大小、刷库次数/耗时、数据库文件大小）
+- [x] 增加并发场景下可用的复合原子方法（如 `putIfAbsent`、`computeIfAbsent`、`removeIfEquals`）
+- [x] 扩展 `LocalList`/`LocalMap` 常用 API 覆盖，并明确不支持方法的替代路径
+- [x] 增加运行时可观测指标（缓存命中率、缓存大小、刷库次数/耗时、数据库文件大小）
 - [x] 增加异常场景恢复能力（数据库文件损坏、异常写入中断、异常退出后的恢复）
-- [ ] 增加可配置写入策略（刷库时间阈值、刷库批量大小、索引创建策略）
+- [x] 增加可配置写入策略（刷库时间阈值、刷库批量大小、索引创建策略）
 - [x] 增加快照导入导出（JSON/CSV）与备份恢复流程
 - [x] 支持非内置类型的可插拔序列化方案（例如 JSON 序列化）
 - [ ] 补充 Spring Boot Starter 与自动配置文档
