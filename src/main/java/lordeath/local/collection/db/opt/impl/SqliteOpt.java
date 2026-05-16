@@ -3,6 +3,7 @@ package lordeath.local.collection.db.opt.impl;
 import lordeath.local.collection.db.bean.LocalColumn;
 import lordeath.local.collection.db.bean.LocalColumnForMap;
 import lordeath.local.collection.db.config.SqliteConfig;
+import lordeath.local.collection.db.config.MainConfig;
 import lordeath.local.collection.db.opt.inter.IDatabaseOpt;
 import lordeath.local.collection.db.util.ColumnNameUtil;
 import lordeath.local.collection.db.util.DBUtil;
@@ -111,10 +112,12 @@ class SqliteOpt<T> implements IDatabaseOpt<T> {
 
         // 使用 columnsForMap的isKey判断是否是
         String pks = columnsForMap.stream().filter(LocalColumnForMap::isKey).map(m -> m.getSinkColumn().getColumnName()).collect(Collectors.joining(","));
-        sql = new StringBuilder("create index idx_").append(StringUtils.replace(pks, ",", "_"))
-                .append(" ON ").append(tableName).append("(").append(pks).append(")");
-        log.debug("表创建完毕，接下来设置map的key索引: {}", sql);
-        DBUtil.executeSql(dataSource, sql.toString());
+        if (MainConfig.DB_CREATE_INDEX.getPropertyBoolean()) {
+            sql = new StringBuilder("create index idx_").append(StringUtils.replace(pks, ",", "_")).
+                    append(" ON ").append(tableName).append("(").append(pks).append(")");
+            log.debug("M-hM-!M-(M-eM-^HM-^[M-eM-;M-:M-eM-.M-^LM-fM-/M-^UM-oM-<M-^LM-fM-^NM-%M-dM-8M-^KM-fM-^]M-%M-hM-.M->M-gM-=M-.mapM-gM-^ZM-^DkeyM-gM-4M-"M-eM-<M-^U: {} {}", sql);
+            DBUtil.executeSql(dataSource, sql.toString());
+        }
         pkColumnName = null;
         log.debug("数据源初始化完毕: {} {}", dataSource, tableName);
     }

@@ -26,6 +26,18 @@ public enum MainConfig {
      * 写入缓存的触发写入的阈值，默认为1000
      */
     CACHE_SIZE("lordeath.local.collection.cache.size", 10000 + ""),
+    /**
+     * 缓存写盘间隔，单位毫秒，0 表示关闭按时刷盘
+     */
+    CACHE_FLUSH_INTERVAL_MILLIS("lordeath.local.collection.cache.flush.interval.millis", "0"),
+    /**
+     * 缓存分批写盘大小，0 表示不分批
+     */
+    CACHE_FLUSH_CHUNK_SIZE("lordeath.local.collection.cache.flush.chunk.size", "0"),
+    /**
+     * 是否自动创建数据库索引
+     */
+    DB_CREATE_INDEX("lordeath.local.collection.db.create.index", "true"),
     ;
 
     private final String key;

@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 import lordeath.local.collection.db.bean.LocalColumn;
 import lordeath.local.collection.db.bean.LocalColumnForMap;
+import lordeath.local.collection.db.config.MainConfig;
 
 import javax.sql.DataSource;
 import java.lang.reflect.Field;
@@ -591,11 +592,13 @@ public class DBUtil {
             stmt.execute(createTableSql.toString());
 
             // 创建索引
-            String createIndexSql = String.format(
-                    "CREATE INDEX idx_%s ON %s(%s)",
-                    keyColumn, tableName, keyColumn
-            );
-            stmt.execute(createIndexSql);
+            if (MainConfig.DB_CREATE_INDEX.getPropertyBoolean()) {
+                String createIndexSql = String.format(
+                        "CREATE INDEX idx_%s ON %s(%s)",
+                        keyColumn, tableName, keyColumn
+                );
+                stmt.execute(createIndexSql);
+            }
 
             return true;
         } catch (Exception e) {

@@ -57,6 +57,10 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * 删除标志
      */
     private final AtomicBoolean removeFlag = new AtomicBoolean(false);
+    /**
+     * 最近一次刷盘时间
+     */
+    private volatile long lastFlushMillis = System.currentTimeMillis();
 
     /**
      * 大小计数器
@@ -254,6 +258,9 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         if (databaseOpt == null) {
             init((Class<T>) t.getClass());
         }
+        if (cacheSize > 0 && !cacheToDBFlag) {
+            flushByIntervalIfNeeded();
+        }
         if (cacheSize <= 0) {
             boolean b = databaseOpt.add(t);
             if (b) {
@@ -315,6 +322,9 @@ public class LocalList<T> implements AutoCloseable, List<T> {
             throw new RuntimeException("数据源操作初始化失败");
         }
 
+        if (cacheSize > 0 && !cacheToDBFlag) {
+            flushByIntervalIfNeeded();
+        }
         if (cacheSize <= 0) {
             return addAllLocally(c);
         }
@@ -629,15 +639,37 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         }
         cacheToDBFlag = true;
         int flushSize = cache.size();
+        int chunk = MainConfig.CACHE_FLUSH_CHUNK_SIZE.getPropertyInt();
+        if (chunk <= 0) {
+            chunk = flushSize;
+        }
         long start = System.nanoTime();
-        databaseOpt.addAll(cache);
+        for (int i = 0; i < cache.size(); i += chunk) {
+            int end = Math.min(cache.size(), i + chunk);
+            databaseOpt.addAll(cache.subList(i, end));
+        }
         cache.clear();
         runtimeMetrics.recordCacheFlush(flushSize, System.nanoTime() - start);
         runtimeMetrics.recordDatabaseWrite(flushSize);
         runtimeMetrics.recordDatabaseSize(sizeCounter.get());
+        lastFlushMillis = System.currentTimeMillis();
 //        cacheToDBFlag.set(true);
 //        cacheToDBCounter.incrementAndGet();
 //        cacheToDBCounter.get();
+    }
+
+    private void flushByIntervalIfNeeded() {
+        if (cache.isEmpty()) {
+            return;
+        }
+        int interval = MainConfig.CACHE_FLUSH_INTERVAL_MILLIS.getPropertyInt();
+        if (interval <= 0) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastFlushMillis >= interval) {
+            restoreCacheToDB();
+        }
     }
 
     private final int preReadCacheSize = 5000;

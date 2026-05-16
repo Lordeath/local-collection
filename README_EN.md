@@ -253,8 +253,11 @@ This keeps each compound operation locked only for the smallest required scope w
   - `lordeath.local.collection.sqlite.file.password`
   - `lordeath.local.collection.h2.file.username`
   - `lordeath.local.collection.h2.file.password`
-- Set cache size by service profile:
+- Tune write behavior:
   - `lordeath.local.collection.cache.size`
+  - `lordeath.local.collection.cache.flush.interval.millis` (0=off)
+  - `lordeath.local.collection.cache.flush.chunk.size` (0=single flush)
+  - `lordeath.local.collection.db.create.index` (`true`/`false`)
 - Use try-with-resources to ensure `close()` executes and temp tables are dropped.
 - In multi-app environments, isolate workspace paths to avoid table collisions.
 
@@ -272,7 +275,7 @@ This keeps each compound operation locked only for the smallest required scope w
 - [x] Expand `LocalList`/`LocalMap` supported APIs and document intentional non-supports with alternatives
 - [x] Add observable runtime metrics (cache hit rate, cache size, flush count/time, db size)
 - [ ] Add failure recovery strategy for DB corruption / partial writes / abnormal shutdown
-- [ ] Add configurable write strategy controls (flush interval, flush chunk size, index/create flags)
+- [x] Add configurable write strategy controls (flush interval, flush chunk size, index/create flags)
 - [ ] Add snapshot/import/export support (JSON/CSV) and backup restore workflow
 - [ ] Add pluggable serialization path for non-native types (e.g. JSON serializer)
 - [ ] Add Spring Boot integration starter and auto-configuration docs
