@@ -27,6 +27,20 @@ import java.util.stream.Collectors;
 public class LocalList<T> implements AutoCloseable, List<T> {
 
     /**
+     * 获取线程安全包装的LocalList。
+     *
+     * @param list 原始LocalList
+     * @param <T>  元素类型
+     * @return 线程安全包装实例
+     */
+    public static <T> SynchronizedLocalList<T> synchronizedList(LocalList<T> list) {
+        if (list == null) {
+            throw new IllegalArgumentException("list is null");
+        }
+        return new SynchronizedLocalList<>(list);
+    }
+
+    /**
      * 数据库操作对象
      */
     IDatabaseOpt<T> databaseOpt;

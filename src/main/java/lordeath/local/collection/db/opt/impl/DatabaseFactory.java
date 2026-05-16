@@ -53,13 +53,13 @@ public class DatabaseFactory {
      */
     public static <T> IDatabaseOpt<T> createDatabaseOptForMap(Class<T> clazz, String tableName, List<LocalColumnForMap> columnsForMap) {
         // 这里可以根据配置或者其他条件选择不同的数据库实现
-        // 目前默认使用H2数据库
+        // 这里可以根据配置或者其他条件选择不同的数据库实现
         String dbEngine = MainConfig.DB_ENGINE.getProperty();
         IDatabaseOpt<T> databaseOpt;
-        if (dbEngine == null || "h2".equalsIgnoreCase(dbEngine)) {
-            databaseOpt = new H2Opt<>(clazz, tableName, columnsForMap);
-        } else if ("sqlite".equalsIgnoreCase(dbEngine)) {
+        if (dbEngine == null || "sqlite".equalsIgnoreCase(dbEngine)) {
             databaseOpt = new SqliteOpt<>(clazz, tableName, columnsForMap);
+        } else if ("h2".equalsIgnoreCase(dbEngine)) {
+            databaseOpt = new H2Opt<>(clazz, tableName, columnsForMap);
         } else {
             throw new IllegalArgumentException("其他的数据库暂时不支持: " + dbEngine);
         }

@@ -24,6 +24,21 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
     private final LocalList<V> innerList;
 
     /**
+     * 获取线程安全包装的LocalMap。
+     *
+     * @param map 原始LocalMap
+     * @param <K> 键类型
+     * @param <V> 值类型
+     * @return 线程安全包装实例
+     */
+    public static <K extends String, V> SynchronizedLocalMap<K, V> synchronizedMap(LocalMap<K, V> map) {
+        if (map == null) {
+            throw new IllegalArgumentException("map is null");
+        }
+        return new SynchronizedLocalMap<>(map);
+    }
+
+    /**
      * 构造一个新的LocalMap实例。
      * <p>
      * 该构造函数初始化一个带有随机生成键列的新LocalMap实例。
