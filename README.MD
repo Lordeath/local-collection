@@ -264,7 +264,7 @@ public final class LocalCollectionConcurrencyKit {
 - [ ] 增加快照导入导出（JSON/CSV）与备份恢复流程
 - [ ] 支持非内置类型的可插拔序列化方案（例如 JSON 序列化）
 - [ ] 补充 Spring Boot Starter 与自动配置文档
-- [ ] 扩展同步包装器接口，新增原子批量操作 API
+- [x] 扩展同步包装器接口，新增原子批量操作 API
 - [x] 增加上线前检查清单与生产故障排查手册
 
 ## 英文版

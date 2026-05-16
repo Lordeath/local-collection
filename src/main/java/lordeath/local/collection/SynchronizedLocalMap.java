@@ -101,6 +101,12 @@ public final class SynchronizedLocalMap<K extends String, V> implements Map<K, V
         }
     }
 
+    public java.util.Map<K, V> putAllIfAbsentWithExisting(Map<? extends K, ? extends V> m) {
+        synchronized (mutex) {
+            return delegate.putAllIfAbsentWithExisting(m);
+        }
+    }
+
     @Override
     public void clear() {
         synchronized (mutex) {
@@ -146,6 +152,12 @@ public final class SynchronizedLocalMap<K extends String, V> implements Map<K, V
     public boolean removeIfEquals(Object key, Object value) {
         synchronized (mutex) {
             return delegate.removeIfEquals(key, value);
+        }
+    }
+
+    public java.util.Map<K, V> removeIfEquals(java.util.Map<? extends K, ? extends V> entries) {
+        synchronized (mutex) {
+            return delegate.removeIfEquals(entries);
         }
     }
 

@@ -267,6 +267,16 @@ public class LocalListTest {
             map.putAllIfAbsent(batch);
             assertEquals("1", map.get("b"));
             assertEquals("3", map.get("c"));
+
+            java.util.Map<String, String> batchExistingProbe = new java.util.HashMap<>();
+            batchExistingProbe.put("b", "1");
+            batchExistingProbe.put("c", "7");
+            java.util.Map<String, String> batchExisting = map.putAllIfAbsentWithExisting(batchExistingProbe);
+            assertEquals(1, batchExisting.size());
+            assertEquals("1", batchExisting.get("b"));
+            assertFalse(batchExisting.containsKey("c"));
+            assertEquals("1", map.get("b"));
+            assertEquals("3", map.get("c"));
         }
 
         try (SynchronizedLocalMap<String, String> synchronizedMap = LocalMap.synchronizedMap(new LocalMap<>())) {
@@ -285,6 +295,20 @@ public class LocalListTest {
             synchronizedMap.putAllIfAbsent(syncBatch);
             assertEquals("1", synchronizedMap.get("a"));
             assertEquals("1", synchronizedMap.get("b"));
+
+            java.util.Map<String, String> syncExistingProbe = new java.util.HashMap<>();
+            syncExistingProbe.put("a", "x");
+            syncExistingProbe.put("c", "y");
+            java.util.Map<String, String> syncExisting = synchronizedMap.putAllIfAbsentWithExisting(syncExistingProbe);
+            assertEquals(1, syncExisting.size());
+            assertEquals("1", syncExisting.get("a"));
+            assertEquals("1", synchronizedMap.get("a"));
+            assertNull(synchronizedMap.get("c"));
+
+            java.util.Map<String, String> removed = synchronizedMap.removeIfEquals(syncExisting);
+            assertEquals(1, removed.size());
+            assertEquals("1", removed.get("a"));
+            assertEquals(0, synchronizedMap.size());
         }
 
     }

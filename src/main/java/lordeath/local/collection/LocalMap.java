@@ -211,6 +211,29 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
         }
     }
 
+    public Map<K, V> putAllIfAbsentWithExisting(Map<? extends K, ? extends V> m) {
+        Map<K, V> existing = new LinkedHashMap<>();
+        for (Entry<? extends K, ? extends V> entry : m.entrySet()) {
+            V existingValue = putIfAbsent(entry.getKey(), entry.getValue());
+            if (existingValue != null) {
+                existing.put(entry.getKey(), existingValue);
+            }
+        }
+        return existing;
+    }
+
+    public Map<K, V> removeIfEquals(Map<? extends K, ? extends V> entries) {
+        Map<K, V> removed = new LinkedHashMap<>();
+        for (Entry<? extends K, ? extends V> entry : entries.entrySet()) {
+            boolean removedMatch = removeIfEquals(entry.getKey(), entry.getValue());
+            if (removedMatch) {
+                removed.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return removed;
+    }
+
+
 
     @Override
     public void clear() {

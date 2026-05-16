@@ -295,5 +295,5 @@ This keeps each compound operation locked only for the smallest required scope w
 - [ ] Add snapshot/import/export support (JSON/CSV) and backup restore workflow
 - [ ] Add pluggable serialization path for non-native types (e.g. JSON serializer)
 - [ ] Add Spring Boot integration starter and auto-configuration docs
-- [ ] Expand `Synchronized*` wrappers with atomic batch operations
+- [x] Expand `Synchronized*` wrappers with atomic batch operations
 - [x] Add operational readiness checks and production troubleshooting playbook
