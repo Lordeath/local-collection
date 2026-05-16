@@ -77,6 +77,9 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
 
     @Override
     public boolean containsKey(Object key) {
+        if (innerList.getDatabaseOpt() == null) {
+            return false;
+        }
         return innerList.getDatabaseOpt().getByKey(keyColumn, key) != null;
     }
 
@@ -87,6 +90,9 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
 
     @Override
     public V get(Object key) {
+        if (innerList.getDatabaseOpt() == null) {
+            return null;
+        }
         return innerList.getDatabaseOpt().getByKey(keyColumn, key);
     }
 
@@ -250,6 +256,9 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
     @Override
     @SuppressWarnings({"unchecked", "NullableProblems"})
     public Set<K> keySet() {
+        if (innerList.getDatabaseOpt() == null) {
+            return Collections.emptySet();
+        }
         List<String> keys = innerList.getDatabaseOpt().getAllKeys(keyColumn);
         return new HashSet<>((Collection<K>) keys);
     }

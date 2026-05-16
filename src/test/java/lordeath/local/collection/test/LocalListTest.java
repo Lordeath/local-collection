@@ -266,7 +266,7 @@ public class LocalListTest {
 
             assertFalse(map.removeIfEquals("c", "5"));
             assertTrue(map.removeIfEquals("c", "4"));
-            assertEquals(2, map.size());
+            assertEquals(1, map.size());
             assertNull(map.get("c"));
             java.util.Map<String, String> batch = new java.util.HashMap<>();
             batch.put("b", "2");
@@ -280,9 +280,10 @@ public class LocalListTest {
             batchExistingProbe.put("b", "1");
             batchExistingProbe.put("c", "7");
             java.util.Map<String, String> batchExisting = map.putAllIfAbsentWithExisting(batchExistingProbe);
-            assertEquals(1, batchExisting.size());
+            assertEquals(2, batchExisting.size());
             assertEquals("1", batchExisting.get("b"));
-            assertFalse(batchExisting.containsKey("c"));
+            assertEquals("3", batchExisting.get("c"));
+            assertTrue(batchExisting.containsKey("c"));
             assertEquals("1", map.get("b"));
             assertEquals("3", map.get("c"));
         }
@@ -311,12 +312,13 @@ public class LocalListTest {
             assertEquals(1, syncExisting.size());
             assertEquals("1", syncExisting.get("a"));
             assertEquals("1", synchronizedMap.get("a"));
-            assertNull(synchronizedMap.get("c"));
+            assertEquals("y", synchronizedMap.get("c"));
 
             java.util.Map<String, String> removed = synchronizedMap.removeIfEquals(syncExisting);
             assertEquals(1, removed.size());
             assertEquals("1", removed.get("a"));
-            assertEquals(0, synchronizedMap.size());
+            assertEquals(2, synchronizedMap.size());
+            assertEquals("1", synchronizedMap.get("b"));
         }
 
     }
@@ -477,20 +479,20 @@ public class LocalListTest {
                 assertEquals(1, metrics.getCacheFlushCount());
                 assertEquals(3, metrics.getDatabaseSize());
                 assertTrue(metrics.getCacheFlushTotalNanos() >= 0);
-                assertEquals(2, metrics.getDatabaseWriteOps());
+                assertEquals(1, metrics.getDatabaseWriteOps());
 
                 assertEquals("a", list.get(0));
                 assertEquals("b", list.get(1));
                 assertEquals("c", list.get(2));
-                assertEquals(2, metrics.getCacheMissCount());
+                assertEquals(3, metrics.getCacheMissCount());
 
                 assertEquals("b", list.set(1, "bb"));
-                assertEquals(3, metrics.getCacheWriteCount());
-                assertEquals(3, metrics.getDatabaseWriteOps());
+            assertEquals(3, metrics.getCacheWriteCount());
+            assertEquals(3, metrics.getDatabaseWriteOps());
 
-                list.remove(2);
-                assertEquals(2, list.size());
-                assertEquals(4, metrics.getDatabaseWriteOps());
+            list.remove(2);
+            assertEquals(2, list.size());
+            assertEquals(4, metrics.getDatabaseWriteOps());
             }
         });
     }

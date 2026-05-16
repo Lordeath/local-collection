@@ -7,6 +7,7 @@ import lordeath.local.collection.db.bean.LocalColumnForMap;
 import lordeath.local.collection.db.config.MainConfig;
 import lordeath.local.collection.db.opt.impl.DatabaseFactory;
 import lordeath.local.collection.db.opt.inter.IDatabaseOpt;
+import lordeath.local.collection.db.util.ColumnNameUtil;
 import lordeath.local.collection.db.util.DBUtil;
 import lordeath.local.collection.serialize.TypeCodec;
 
@@ -161,6 +162,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     void init(Class<T> clazz) {
         databaseOpt = DatabaseFactory.createDatabaseOptForList(clazz);
+        columns = ColumnNameUtil.getFields(clazz);
         String tableName = databaseOpt.getTableName();
         DataSource dataSource = databaseOpt.getDataSource();
         cleanable = cleaner.register(this, () -> DBUtil.drop(tableName, dataSource));
@@ -516,17 +518,21 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     public T set(int index, T element) {
         boolean b = cacheSize > 0 && !cacheToDBFlag;
         if (b) {
-            T t = cache.set(index, element);
+            T old = cache.set(index, element);
             runtimeMetrics.recordCacheWrite();
-            return t;
+            return old;
         }
         restoreCacheToDB();
-        T t = databaseOpt.set(index, element);
-        if (t != null) {
+        T old = databaseOpt.get(index, removeFlag.get());
+        if (old == null) {
+            return null;
+        }
+        databaseOpt.set(index, element);
+        if (element != null) {
             runtimeMetrics.recordDatabaseWrite(1);
             runtimeMetrics.recordDatabaseSize(sizeCounter.get());
         }
-        return t;
+        return old;
     }
 
     /**
