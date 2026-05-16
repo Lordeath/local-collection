@@ -17,6 +17,7 @@ import java.util.Date;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * 数据库工具类
@@ -661,6 +662,7 @@ public class DBUtil {
                                             String targetTableName, List<String> groupByColumns,
                                             String whereClause,
                                             List<LocalColumnForMap> columnForMapList) {
+        String sourceAlias = "source_";
         // 构建INSERT语句
         StringBuilder insertSql = new StringBuilder();
         insertSql.append("INSERT INTO ").append(targetTableName).append(" (");
@@ -677,7 +679,7 @@ public class DBUtil {
             insertSql.append(localColumnForMap.getExpression()).append(", ");
         }
         insertSql.setLength(insertSql.length() - 2);
-        insertSql.append(" FROM ").append(sourceTableName);
+        insertSql.append(" FROM ").append(sourceTableName).append(" ").append(sourceAlias);
 
         List<Object> params = new ArrayList<>();
         StringBuilder whereBuilder = new StringBuilder();
@@ -697,7 +699,8 @@ public class DBUtil {
         }
 
         if (!groupByColumns.isEmpty()) {
-            insertSql.append(" GROUP BY ").append(String.join(", ", groupByColumns));
+            insertSql.append(" GROUP BY ").append(groupByColumns.stream()
+                    .map(column -> sourceAlias + "." + column).collect(Collectors.joining(", ")));
         }
 
         log.debug("Inserting data with SQL: {}", insertSql);

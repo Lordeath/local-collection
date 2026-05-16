@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lordeath.local.collection.LocalList;
 import lordeath.local.collection.LocalMap;
+import lordeath.local.collection.SynchronizedLocalMap;
 import lordeath.local.collection.serialize.TypeCodec;
 import lordeath.local.collection.serialize.TypeCodecRegistry;
 import org.apache.commons.lang3.reflect.FieldUtils;

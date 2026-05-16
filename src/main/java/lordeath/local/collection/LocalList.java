@@ -20,12 +20,14 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.math.BigDecimal;
 import java.lang.ref.Cleaner;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.stream.Collectors;
 
 /**
  * 参考的是ArrayList，但是实现方式是H2数据库或者其他数据库
@@ -1202,8 +1204,8 @@ public class LocalList<T> implements AutoCloseable, List<T> {
             }
             while (true) {
                 skipWs();
-                List<String> row = parseStringArray();
-                rows.add(row);
+                String[] row = parseStringArray();
+                rows.add(Arrays.asList(row));
                 skipWs();
                 char ch = peek();
                 if (ch == ',') {
