@@ -183,6 +183,58 @@ static void putIfAbsentUnderLock(SynchronizedLocalMap<String, String> map, Strin
 
 注意：`putIfAbsent`、`compute`、`computeIfAbsent`、`merge` 等默认方法虽然可用，但在语义上仍属于复合操作，复杂并发场景下建议按你的业务规则显式加锁处理，避免和持久化/数据库路径切换相关的竞态。
 
+## 并发安全模板（推荐）
+
+下面给出一组可复用的原子操作写法，便于团队统一复用。
+
+```java
+public final class LocalCollectionConcurrencyKit {
+  public static <V> void putIfAbsent(
+      SynchronizedLocalMap<String, V> map,
+      String key,
+      java.util.function.Supplier<V> supplier) {
+    synchronized (map.getMutex()) {
+      if (!map.containsKey(key)) {
+        map.put(key, supplier.get());
+      }
+    }
+  }
+
+  public static <V> V computeIfAbsent(
+      SynchronizedLocalMap<String, V> map,
+      String key,
+      java.util.function.Function<String, V> computer) {
+    synchronized (map.getMutex()) {
+      V current = map.get(key);
+      if (current == null) {
+        current = computer.apply(key);
+        map.put(key, current);
+      }
+      return current;
+    }
+  }
+
+  public static <V> boolean removeIf(
+      SynchronizedLocalList<V> list,
+      int index,
+      java.util.function.Predicate<V> matcher) {
+    synchronized (list.getMutex()) {
+      V value = list.get(index);
+      if (matcher.test(value)) {
+        list.remove(index);
+        return true;
+      }
+      return false;
+    }
+  }
+
+  private LocalCollectionConcurrencyKit() {
+  }
+}
+```
+
+说明：这类方法里每个复合操作只做最小必要加锁，既保证原子性，也避免把整个对象长时间持有全局锁。
+
 ## 后续计划
 
 - [x] `LocalList` 转 `LocalMap` 聚合链路

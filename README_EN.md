@@ -184,6 +184,58 @@ static void putIfAbsentUnderLock(SynchronizedLocalMap<String, String> map, Strin
 
 Note: `putIfAbsent`, `compute`, `computeIfAbsent`, and `merge` should still be treated as composite operations. In complex concurrent cases, wrap your own critical section with the shared mutex to avoid race conditions with compound logic.
 
+## Concurrency helper templates (recommended)
+
+Here are reusable helper methods for common atomic patterns.
+
+```java
+public final class LocalCollectionConcurrencyKit {
+  public static <V> void putIfAbsent(
+      SynchronizedLocalMap<String, V> map,
+      String key,
+      java.util.function.Supplier<V> supplier) {
+    synchronized (map.getMutex()) {
+      if (!map.containsKey(key)) {
+        map.put(key, supplier.get());
+      }
+    }
+  }
+
+  public static <V> V computeIfAbsent(
+      SynchronizedLocalMap<String, V> map,
+      String key,
+      java.util.function.Function<String, V> computer) {
+    synchronized (map.getMutex()) {
+      V current = map.get(key);
+      if (current == null) {
+        current = computer.apply(key);
+        map.put(key, current);
+      }
+      return current;
+    }
+  }
+
+  public static <V> boolean removeIf(
+      SynchronizedLocalList<V> list,
+      int index,
+      java.util.function.Predicate<V> matcher) {
+    synchronized (list.getMutex()) {
+      V value = list.get(index);
+      if (matcher.test(value)) {
+        list.remove(index);
+        return true;
+      }
+      return false;
+    }
+  }
+
+  private LocalCollectionConcurrencyKit() {
+  }
+}
+```
+
+This keeps each compound operation locked only for the smallest required scope while preserving atomic behavior.
+
 ## Roadmap
 
 - [x] `LocalList` to `LocalMap` aggregation path
