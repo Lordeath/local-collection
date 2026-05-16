@@ -143,6 +143,33 @@ try (LocalMap<String, Bean> map = LocalMap.from(sourceList)
 }
 ```
 
+### Concurrency and synchronization strategy
+
+`LocalList` / `LocalMap` are intentionally not internally synchronized.
+
+- This keeps the core implementation lightweight.
+- It avoids hidden global locking that could interfere with upper-layer transaction or batch logic.
+
+`SynchronizedLocalList` / `SynchronizedLocalMap` provide **instance-level** synchronization:
+
+- Single API calls are thread-safe (for example `add`, `get`, `put`, `remove`).
+- Compound operations still need external coordination, such as check-then-act (`containsKey` + `put`), to avoid race conditions. You can synchronize on the wrapper mutex via `getMutex()`.
+
+```java
+SynchronizedLocalMap<String, String> map = LocalMap.synchronizedMap(new LocalMap<>());
+try {
+  synchronized (map.getMutex()) {
+    if (!map.containsKey("a")) {
+      map.put("a", "1");
+    }
+  }
+} finally {
+  map.close();
+}
+```
+
+If you have heavy concurrent writes, consider sharding or write-queueing at a higher level instead of relying only on coarse global locking.
+
 ## Roadmap
 
 - [x] `LocalList` to `LocalMap` aggregation path

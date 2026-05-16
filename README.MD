@@ -142,6 +142,33 @@ try (LocalMap<String, Bean> map = LocalMap.from(sourceList)
 }
 ```
 
+### 并发与同步策略说明
+
+本库默认不在 `LocalList` / `LocalMap` 内部做全局锁，是基于两个目标：
+
+- 保持底层实现简单，不干预上层事务或业务组合逻辑。
+- 在单机单线程场景减少锁开销；对大多数批处理或工具方法更友好。
+
+`SynchronizedLocalList` / `SynchronizedLocalMap` 是“实例级别”的外部同步包装：
+
+- 单次方法调用是线程安全的（如 `add`、`get`、`put`、`remove` 等）。
+- 但像“先判断再更新”这类复合操作仍需你在外层加锁，避免 check-then-act 竞态，例如 `containsKey` 后 `put`。你可以通过包装类的 `getMutex()` 获取同一把锁。
+
+```java
+SynchronizedLocalMap<String, String> map = LocalMap.synchronizedMap(new LocalMap<>());
+try {
+  synchronized (map.getMutex()) {
+    if (!map.containsKey("a")) {
+      map.put("a", "1");
+    }
+  }
+} finally {
+  map.close();
+}
+```
+
+如果你有更高并发写入压力，建议评估更高层的分片或队列化写入策略，而不是只靠大粒度全局锁去解决吞吐瓶颈。
+
 ## 后续计划
 
 - [x] `LocalList` 转 `LocalMap` 聚合链路
