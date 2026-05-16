@@ -235,6 +235,17 @@ public final class LocalCollectionConcurrencyKit {
 
 说明：这类方法里每个复合操作只做最小必要加锁，既保证原子性，也避免把整个对象长时间持有全局锁。
 
+## 运维前置检查与故障排查
+
+- 上线前先确认数据库引擎、路径、缓存与索引参数已按业务签名配置。
+- 跑一次包含写入、读取、遍历、关闭的冒烟测试（add/get/iterator/size/close）并确认无异常。
+- 若出现慢查询或报错，先检查索引配置、工作目录权限、以及是否有遗留表/文件被外部进程占用。
+
+故障处理建议：
+- 若出现“部分写入丢失”疑似现象，确认关闭路径是否被触发，关注是否命中 flush.interval/flush.chunk.size 配置并观察 metrics。
+- 若表初始化失败，先核验 workspace（应用名）隔离是否正确，再在维护窗口处理遗留文件。
+- 若出现异常中断后重启不可恢复，请先保留数据文件再开启 debug 级别日志收集。
+
 ## 后续计划
 
 - [x] `LocalList` 转 `LocalMap` 聚合链路
@@ -254,7 +265,7 @@ public final class LocalCollectionConcurrencyKit {
 - [ ] 支持非内置类型的可插拔序列化方案（例如 JSON 序列化）
 - [ ] 补充 Spring Boot Starter 与自动配置文档
 - [ ] 扩展同步包装器接口，新增原子批量操作 API
-- [ ] 增加上线前检查清单与生产故障排查手册
+- [x] 增加上线前检查清单与生产故障排查手册
 
 ## 英文版
 

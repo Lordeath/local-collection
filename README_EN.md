@@ -261,6 +261,22 @@ This keeps each compound operation locked only for the smallest required scope w
 - Use try-with-resources to ensure `close()` executes and temp tables are dropped.
 - In multi-app environments, isolate workspace paths to avoid table collisions.
 
+## Readiness checks and troubleshooting
+
+- Pre-flight checks before first production traffic:
+  - Confirm DB engine property (`sqlite`/`h2`) and file/workspace path are explicitly set.
+  - Confirm cache and flush settings are intended for workload:
+    - `cache.size`
+    - `cache.flush.interval.millis`
+    - `cache.flush.chunk.size`
+    - `db.create.index`
+  - Run a short smoke test with both write and read paths (`add`, `get`, `iterator`, `size`).
+  - Validate close path by running a loop workload and ensuring no temp tables/file locks are left behind.
+- Incident playbook:
+  - If inserts appear missing after crash, verify cache flushing on close and reopen, then replay startup initialization.
+  - If query/read path is slow, check index creation flag and inspect query plan before scaling.
+  - If tables fail to initialize, confirm workspace path ownership and remove stale tables only with a maintenance window.
+
 ## Roadmap
 
 - [x] `LocalList` to `LocalMap` aggregation path
@@ -280,4 +296,4 @@ This keeps each compound operation locked only for the smallest required scope w
 - [ ] Add pluggable serialization path for non-native types (e.g. JSON serializer)
 - [ ] Add Spring Boot integration starter and auto-configuration docs
 - [ ] Expand `Synchronized*` wrappers with atomic batch operations
-- [ ] Add operational readiness checks and production troubleshooting playbook
+- [x] Add operational readiness checks and production troubleshooting playbook
