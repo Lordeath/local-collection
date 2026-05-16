@@ -83,6 +83,13 @@ A lightweight local-backed alternative to `List` / `Map` that stores data in an 
 
 Unsupported field types fail fast with an exception.
 
+To persist non-native types, register a `TypeCodec` in `TypeCodecRegistry` first:
+
+- Implement and register `TypeCodec`:
+  - `TypeCodecRegistry.register(new TypeCodec() { ... })`
+- After registration, `LocalList`/`LocalMap` automatically applies codec `serialize`/`deserialize` on read/write.
+- `TypeCodec#getDbType()` defines the SQL column type (for example, `VARCHAR`).
+
 ## Usage examples
 
 ### Maven dependency
@@ -294,7 +301,7 @@ This keeps each compound operation locked only for the smallest required scope w
 - [x] Add failure recovery strategy for DB corruption / partial writes / abnormal shutdown
 - [x] Add configurable write strategy controls (flush interval, flush chunk size, index/create flags)
 - [x] Add snapshot/import/export support (JSON/CSV) and backup restore workflow
-- [ ] Add pluggable serialization path for non-native types (e.g. JSON serializer)
+- [x] Add pluggable serialization path for non-native types (e.g. JSON serializer)
 - [ ] Add Spring Boot integration starter and auto-configuration docs
 - [x] Expand `Synchronized*` wrappers with atomic batch operations
 - [x] Add operational readiness checks and production troubleshooting playbook

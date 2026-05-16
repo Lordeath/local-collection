@@ -5,6 +5,8 @@ import lordeath.local.collection.db.bean.LocalColumn;
 import lordeath.local.collection.db.bean.LocalColumnForMap;
 import lordeath.local.collection.db.opt.inter.IDatabaseOpt;
 import lordeath.local.collection.db.util.DBUtil;
+import lordeath.local.collection.serialize.TypeCodec;
+import lordeath.local.collection.serialize.TypeCodecRegistry;
 import lordeath.local.collection.db.config.MainConfig;
 import lordeath.local.collection.db.util.SqlDialectUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -105,7 +107,7 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
                 LocalColumnForMap localColumnForMap = new LocalColumnForMap();
                 localColumnForMap.setKey(true);
                 localColumnForMap.setExpression(keyColumn);
-                localColumnForMap.setSinkColumn(new LocalColumn(keyColumn, key.getClass(), DBUtil.getSqlType(key.getClass()), null));
+                localColumnForMap.setSinkColumn(buildLocalColumn(keyColumn, key.getClass(), null));
                 columnForMapList.add(localColumnForMap);
             }
 
@@ -113,7 +115,7 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
             if (sqlType != null) {
                 LocalColumnForMap localColumnForMap = new LocalColumnForMap();
                 localColumnForMap.setExpression("value_column");
-                localColumnForMap.setSinkColumn(new LocalColumn("value_column", resultClass, sqlType, null));
+                localColumnForMap.setSinkColumn(buildLocalColumn("value_column", resultClass, null));
                 columnForMapList.add(localColumnForMap);
             } else {
                 // 我们只需要�
@@ -135,7 +137,7 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
                     if (field == null) {
                         throw new UnsupportedOperationException("目标的类无法找到对应的字段: " + selectColumn);
                     }
-                    localColumnForMap.setSinkColumn(new LocalColumn(sinkColumnName, field.getType(), DBUtil.getSqlType(field.getType()), field));
+                    localColumnForMap.setSinkColumn(buildLocalColumn(sinkColumnName, field.getType(), field));
                     columnForMapList.add(localColumnForMap);
                 }
             }
@@ -147,6 +149,15 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
         }
         innerList.putByKey(keyColumn, key + "", value);
         return oldValue;
+    }
+
+    private LocalColumn buildLocalColumn(String columnName, Class<?> type, Field field) {
+        String sqlType = DBUtil.getSqlTypeOrNull(type);
+        if (sqlType == null) {
+            throw new UnsupportedOperationException("不支持的数据类型，请联系开发: " + type);
+        }
+        TypeCodec codec = TypeCodecRegistry.resolve(type);
+        return new LocalColumn(columnName, type, sqlType, field, codec);
     }
 
     @Override
@@ -391,7 +402,7 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
                 LocalColumnForMap localColumnForMap = new LocalColumnForMap();
                 localColumnForMap.setKey(true);
                 localColumnForMap.setExpression(buildGroupByKeyExpression(keyColumn));
-                localColumnForMap.setSinkColumn(new LocalColumn(keyColumn, keyField.getType(), DBUtil.getSqlType(keyField.getType()), keyField));
+                localColumnForMap.setSinkColumn(buildLocalColumn(keyColumn, keyField.getType(), keyField));
                 columnForMapList.add(localColumnForMap);
             }
 
@@ -413,7 +424,7 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
                 if (field == null) {
                     throw new UnsupportedOperationException("目标的类无法找到对应的字段: " + selectColumn);
                 }
-                localColumnForMap.setSinkColumn(new LocalColumn(sinkColumnName, field.getType(), DBUtil.getSqlType(field.getType()), field));
+                localColumnForMap.setSinkColumn(buildLocalColumn(sinkColumnName, field.getType(), field));
                 columnForMapList.add(localColumnForMap);
             }
             return columnForMapList;

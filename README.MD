@@ -73,6 +73,13 @@
 
 不在白名单的字段类型会抛异常。
 
+可插拔序列化类型可通过以下方式接入（例如 `GeoPoint` 的 JSON/字符串序列化）：
+
+- 实现并注册 `TypeCodec`：
+  - `TypeCodecRegistry.register(new TypeCodec() { ... })`
+- 注册后，`LocalList`/`LocalMap` 会在读写时自动使用 `serialize/deserialize`。
+- `TypeCodec#getDbType()` 决定字段在建表时的 SQL 类型，当前默认示例可返回 `VARCHAR`。
+
 ## 使用示例
 
 ### Maven 依赖
@@ -263,7 +270,7 @@ public final class LocalCollectionConcurrencyKit {
 - [x] 增加异常场景恢复能力（数据库文件损坏、异常写入中断、异常退出后的恢复）
 - [ ] 增加可配置写入策略（刷库时间阈值、刷库批量大小、索引创建策略）
 - [x] 增加快照导入导出（JSON/CSV）与备份恢复流程
-- [ ] 支持非内置类型的可插拔序列化方案（例如 JSON 序列化）
+- [x] 支持非内置类型的可插拔序列化方案（例如 JSON 序列化）
 - [ ] 补充 Spring Boot Starter 与自动配置文档
 - [x] 扩展同步包装器接口，新增原子批量操作 API
 - [x] 增加上线前检查清单与生产故障排查手册
