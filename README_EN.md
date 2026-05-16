@@ -1,73 +1,136 @@
 # local-collection
 
-A lightweight `List`/`Map` alternative backed by a local embedded database to reduce JVM memory pressure in large-data scenarios.
+A lightweight local-backed alternative to `List` / `Map` that stores data in an embedded database to reduce heap pressure and OOM risk.
 
-> Suitable for: report generation jobs, large data extraction, offline transformation pipelines, and any case where objects would otherwise consume a lot of heap.
+## Core model
 
-## Core idea
+- `LocalList` implements `List<T>, AutoCloseable` and persist data through local database tables.
+- `LocalMap` implements `Map<String, V>` on top of `LocalList`, including aggregation-style construction from a source list.
+- Database operations are routed by `IDatabaseOpt` and selected via `DatabaseFactory` as:
+  - `sqlite` (default)
+  - `h2`
+- Thread-safety: current implementation is **not thread-safe**.
 
-`local-collection` mimics the familiar `List` / `Map` usage style while storing data in local database files (instead of keeping everything in heap memory). The default engine is **SQLite**, with **H2** supported as an alternative.
+## Runtime behavior (from source logic)
 
-## Current capabilities
+- `LocalList` initializes DB table metadata on first use (`init`) based on the element type.
+- `cacheSize` is controlled by `lordeath.local.collection.cache.size` (default `10000`).
+  - When `cacheSize > 0` and no flush happened yet, writes go to in-memory `cache`.
+  - When threshold is exceeded, `restoreCacheToDB()` flushes cache to database in batch.
+- After flush, reads/iteration use DB-backed query paths.
+- `close()` always flushes cache once and closes DB resources.
+- `finalize()` also tries to close, but execution is not guaranteed; `try-with-resources` is strongly recommended.
 
-- Implements disk-backed `LocalList` and `LocalMap` APIs.
-- Automatically initializes local storage paths and data files on startup.
-- Basic CRUD and iteration support.
-- Optional write caching for small datasets to reduce IO overhead.
-- Prefetching in iterator paths for better large-scan throughput.
+## Configuration (system property / environment variable)
 
-## Limitations
+- `lordeath.local.collection.db.engine` (default `sqlite`)
+  - `sqlite`: `SqliteConfig`
+  - `h2`: `H2Config`
+- `lordeath.local.collection.db.init.delete` (default `true`)
+  - delete DB file on startup if it exists
+- `spring.application.name` (default `unknow_app_name`)
+  - used for app-level directory isolation
+- `lordeath.local.collection.cache.size` (default `10000`)
+  - in-memory write cache size for `LocalList`
+- `lordeath.local.collection.sqlite.file.path` / `...h2.file.path`
+  - custom DB file path
+- `lordeath.local.collection.sqlite.file.username` / `...password`
+  - SQLite credentials (optional)
+- `lordeath.local.collection.h2.file.username` / `...password`
+  - H2 credentials (optional)
 
-- Modifying a value object after reading it from the collection will not be automatically persisted.
-- Only primitive-wrapper/basic persistence-friendly types are well supported; see the type whitelist in `ColumnNameUtil`.
-- `stream()` usage should be careful: avoid relying on mutating behavior via `peek`.
-- Behavior and coverage may evolve with versions; verify against your target release.
+`MainConfig` resolves each value in this order: `System.getProperty` -> `System.getenv` -> default value.
 
-## Quick start (SQLite)
+## API support & behavior
 
-### 1) Add dependency
+### LocalList (partial `List`)
+
+- Supported: `add`, `addAll`, `remove(index)`, `clear`, `get`, `set`, `size`, `isEmpty`, `iterator`, `listIterator`, `subList`, `pk(index)`.
+- Explicitly unsupported (`UnsupportedOperationException`):
+  - `contains`, `toArray`, `remove(Object)`, `containsAll`, `add(index, E)`, `removeAll`, `retainAll`, `indexOf`, `lastIndexOf`, etc.
+- Important: mutating objects returned by `get` is **not** auto-persisted; call `set(index, value)` to write back.
+- `subList` is immutable (`Collections.unmodifiableList`) when reading from DB path.
+
+### LocalMap
+
+- Use either:
+  - `new LocalMap<>()` for direct key/value storage
+  - `LocalMap.from(sourceList).where(...).groupBy(...).select(...).resultClass(...).keyField(...).build()` for grouped aggregation
+- `put` returns old value, `remove` returns removed value.
+- `keySet()`, `entrySet()`, `values()` are backed by DB queries.
+
+## Persistable types
+
+`ColumnNameUtil` currently supports the following mapped types:
+
+- `String`
+- `Integer` / `int`
+- `Long` / `long`
+- `Double` / `double`
+- `Float` / `float`
+- `Boolean` / `boolean`
+- `Character` / `char`
+- `Date` / `java.sql.Date` / `java.util.Date`
+- `BigDecimal`
+
+Unsupported field types fail fast with an exception.
+
+## Usage examples
+
+### Maven dependency
 
 ```xml
 <dependency>
-    <groupId>io.github.lordeath</groupId>
-    <artifactId>local-collection</artifactId>
-    <version>1.0.20250306.1</version>
+  <groupId>io.github.lordeath</groupId>
+  <artifactId>local-collection</artifactId>
+  <version>1.0.20250306.1</version>
 </dependency>
 ```
 
-### 2) Optional: switch engine
+### LocalList
 
 ```java
-// SQLite is the default, only set this when using H2:
-System.setProperty("dbEngine", "h2");
+System.setProperty("lordeath.local.collection.db.engine", "h2");
+
+try (LocalList<String> list = new LocalList<>(String.class)) {
+  list.add("a");
+  list.add("b");
+  list.set(1, "bb");
+  String value = list.get(1);
+} // auto close and cleanup
 ```
 
-### 3) Usage
+### LocalMap direct usage
 
 ```java
-try (LocalList<String> list = new LocalList<>(String.class)) {
-    list.add("a");
-    list.add("b");
+try (LocalMap<String, String> map = new LocalMap<>()) {
+  map.put("a", "1");
+  String old = map.put("a", "2"); // returns "1"
+  map.remove("a");                // returns "2"
+}
+```
 
-    // resources are cleaned up on close (and best-effort cleanup may happen later by GC)
+### LocalMap from list (grouped)
+
+```java
+try (LocalMap<String, Bean> map = LocalMap.from(sourceList)
+    .where("age >= 18")
+    .groupBy("name")
+    .select("name", "sum(score) AS score")
+    .resultClass(Bean.class)
+    .keyField(FieldUtils.getDeclaredField(Bean.class, "name", true))
+    .build()) {
+
+  Bean v = map.get("Alice");
 }
 ```
 
 ## Roadmap
 
-- [x] Convert `LocalList` to `Map` for aggregation use cases
-- [x] Database-backed `Map` implementation
-- [x] Fallback to in-memory path for small datasets
-- [x] Startup config validation and data cleanup
-- [x] App-level data-path isolation
-- [x] Add read cache with threshold tuning
-- [x] Prefetch strategy in iterator flow
-- [ ] Use `spring.application.name` for safer default directories
-- [ ] Document SSD path strategy and related configuration
-- [ ] Clarify and enforce restricted `stream().peek(...)` mutation semantics
-
-## Related references
-
-- Example usage: `src/test/java/lordeath/local/collection/test/LocalListTest.java`
-- Type mapping: `src/main/java/lordeath/local/collection/db/util/ColumnNameUtil.java`
-
+- [x] `LocalList` to `LocalMap` aggregation path
+- [x] DB-backed `LocalMap` implementation
+- [x] Cache + bulk flush strategy
+- [x] Startup cleanup and app-level directory isolation
+- [x] Iterator prefetch strategy (`preReadCacheSize = 5000`)
+- [ ] Extend operational documentation and deployment guidance
+- [ ] Clarify stream usage boundaries

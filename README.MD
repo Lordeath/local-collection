@@ -1,77 +1,140 @@
 # local-collection
 
-一个基于本地数据库的轻量级 `List` / `Map` 替代方案，用于在内存受限场景下降低 OOM 风险。
+一个轻量级的本地 `List` / `Map` 封装，核心目标是在大内存压力场景下将数据落盘，降低 OOM 风险。
 
-> 适用于：报表批处理、全量导出、离线清洗、需要大量随机访问但不希望占满 JVM 堆的场景。
+## 核心模型
 
-## 核心思路
+- `LocalList` 通过 `LocalList<T> implements List<T>, AutoCloseable` 提供列表能力。
+- `LocalMap` 通过 `LocalList` 实现 `Map<String, V>`，用于键值场景和分组聚合。
+- 实际数据库操作由 `IDatabaseOpt` 抽象，底层由 `DatabaseFactory` 选择实现：`sqlite`（默认）或 `h2`。
+- 线程模型：当前实现声明为线程不安全（`not thread-safe`）。
 
-项目在 `ArrayList` / `HashMap` 的 API 习惯上做适配，把数据持久化到本地数据库文件中，以减少堆内存占用。当前默认数据库引擎为 **SQLite**，也支持 **H2** 作为替代。
+## 运行机制（按源码）
 
-## 已有能力
+- `LocalList` 首次使用时会按元素类型初始化数据库表结构（`init`）。
+- `cacheSize` 通过 `lordeath.local.collection.cache.size` 控制（默认 `10000`）。
+  - 当 `cacheSize > 0` 且尚未触发落库时，新增数据先写入内存 `cache`。
+  - 命中阈值后会调用 `restoreCacheToDB()`，一次性刷入数据库。
+  - 落库后读取、遍历将走数据库路径。
+- `close()` 会触发一次 `restoreCacheToDB()`，并 `close` 数据库连接。
+- `finalize()`（兼容旧清理机制）会尝试执行 `close()`，但不保证一定执行，因此建议显式 `try-with-resources`。
 
-- 提供基于数据库实现的 `LocalList` / `LocalMap`（详见 `LocalListTest` / 相关测试）。
-- 自动在启动时按配置初始化本地存储目录和数据文件。
-- 基础增删改查与遍历支持。
-- 数据量较小场景下可采用写缓存以减少读写开销，提升性能。
-- 迭代器采用预读策略提升大规模遍历性能。
+## 配置项（系统属性 / 环境变量）
 
-## 使用限制
+- `lordeath.local.collection.db.engine`（默认 `sqlite`）
+  - `sqlite`：使用 `SqliteConfig`
+  - `h2`：使用 `H2Config`
+- `lordeath.local.collection.db.init.delete`（默认 `true`）
+  - 启动时删除数据库文件（若存在）
+- `spring.application.name`（默认 `unknow_app_name`）
+  - 用于数据库路径隔离（本项目支持按应用目录分离）
+- `lordeath.local.collection.cache.size`（默认 `10000`）
+  - LocalList 内存缓存上限
+- `lordeath.local.collection.sqlite.file.path` / `...h2.file.path`
+  - 自定义数据库文件目录
+- `lordeath.local.collection.sqlite.file.username` / `...password`
+  - SQLite 连接凭据（如需）
+- `lordeath.local.collection.h2.file.username` / `...password`
+  - H2 连接凭据（如需）
 
-- 修改从集合中读取出的对象后，不会自动持久化；需通过 `LocalList.set(int index, Object value)` 明确写回。
-- 当前主要支持基本类型及可持久化字段，不建议放入复杂对象图（参见 `ColumnNameUtil` 中支持类型白名单）。
-- `stream()` 使用场景仍需谨慎，避免依赖 `peek` 做修改。
-- 当前行为和特性会随版本演进持续优化，建议结合对应版本说明检查细节。
+> `MainConfig` 的配置解析优先级为：`System.getProperty` → `System.getenv` → 默认值。
 
-## 使用方式（以 SQLite 为例）
+## API 覆盖与行为（按源码）
 
-### 1）引入依赖
+### LocalList（部分 `List`）
+
+- 已支持：`add`、`addAll`、`remove(index)`、`clear`、`get`、`set`、`size`、`isEmpty`、`iterator`、`listIterator`、`subList`、`pk(index)`。
+- 明确不支持（抛 `UnsupportedOperationException`）：`contains`、`toArray`、`remove(Object)`、`containsAll`、`add(index, E)`、`removeAll`、`retainAll`、`indexOf`、`lastIndexOf` 等。
+- 关键注意事项：读取出的对象（例如 `get`）即使被修改，也不会自动回写，必须通过 `set(index, element)` 持久化。
+- `subList` 在数据库路径下返回的是不可变列表。
+
+### LocalMap（`Map`）
+
+- 构造方式：
+  - `new LocalMap<>()`（直接 key-value）
+  - `LocalMap.from(sourceList).where(...).groupBy(...).select(...).resultClass(...).keyField(...).build()`（聚合）
+- `put` 返回旧值；`remove` 返回被删值。
+- `keySet()`、`entrySet()`、`values()` 基于底层数据库查询实现。
+- 未覆盖全部 `Map` 的语义优化，适合以数据库持久化为主的场景。
+
+## 类型持久化能力
+
+`ColumnNameUtil` 目前按类型白名单映射到数据库类型，支持：
+
+- `String`
+- `Integer` / `int`
+- `Long` / `long`
+- `Double` / `double`
+- `Float` / `float`
+- `Boolean` / `boolean`
+- `Character` / `char`
+- `Date` / `java.sql.Date` / `java.util.Date`
+- `BigDecimal`
+
+不在白名单的字段类型会抛异常。
+
+## 使用示例
+
+### Maven 依赖
 
 ```xml
 <dependency>
-    <groupId>io.github.lordeath</groupId>
-    <artifactId>local-collection</artifactId>
-    <version>1.0.20250306.1</version>
+  <groupId>io.github.lordeath</groupId>
+  <artifactId>local-collection</artifactId>
+  <version>1.0.20250306.1</version>
 </dependency>
 ```
 
-### 2）可选：切换数据库引擎
+### LocalList
 
 ```java
-// 默认使用 sqlite，通常无需设置。仅在使用 h2 时手动指定：
-System.setProperty("dbEngine", "h2");
+// 默认引擎为 sqlite，可选：
+System.setProperty("lordeath.local.collection.db.engine", "h2");
+
+try (LocalList<String> list = new LocalList<>(String.class)) {
+  list.add("a");
+  list.add("b");
+  list.set(1, "bb"); // 可写回
+  String v = list.get(1);
+} // 自动触发 close，避免残留
 ```
 
-### 3）使用示例
+### LocalMap（直接 put/get）
 
 ```java
-try (LocalList<String> list = new LocalList<>(String.class)) {
-    list.add("a");
-    list.add("b");
-
-    // 使用结束后会尝试在关闭时回收本地资源
+try (LocalMap<String, String> map = new LocalMap<>()) {
+  map.put("a", "1");
+  String old = map.put("a", "2"); // 返回 "1"
+  map.remove("a");                // 返回 "2"
 }
 ```
 
-## 后续计划
+### LocalMap from LocalList（分组）
 
-- [x] 支持 `LocalList` 与 `Map` 的转换
-- [x] Map 基于 H2 / 本地库实现
-- [x] 小数据量场景回退到内存实现以兼顾吞吐
-- [x] 初始化配置检查与文件清理
-- [x] 支持 `app` 级隔离目录，避免共享目录误删
-- [x] 增加读缓存与阈值控制
-- [x] 引入迭代预读提升扫描速度
-- [ ] 集成 `spring.application.name` 作为默认目录命名依据
-- [ ] 文档化 SSD 存储路径策略与配置
-- [ ] 明确禁用/限制 `stream().peek(...)` 的修改语义
+```java
+try (LocalMap<String, Bean> map = LocalMap.from(sourceList)
+    .where("age >= 18")
+    .groupBy("name")
+    .select("name", "sum(score) AS score")
+    .resultClass(Bean.class)
+    .keyField(FieldUtils.getDeclaredField(Bean.class, "name", true))
+    .build()) {
 
-## 相关文件
+  Bean v = map.get("Alice");
+}
+```
 
-- 实现示例：`src/test/java/lordeath/local/collection/test/LocalListTest.java`
-- 类型映射：`src/main/java/lordeath/local/collection/db/util/ColumnNameUtil.java`
+## 后续计划（对齐代码方向）
 
-## English version
+- [x] `LocalList` 转 `LocalMap` 聚合链路
+- [x] `LocalMap` 数据库落盘实现
+- [x] 分层缓存与批量刷库策略
+- [x] 启动初始化清理与应用名目录隔离
+- [x] 读缓存与迭代预读策略（`preReadCacheSize = 5000`）
+- [ ] 继续补齐文档与可运维参数说明
+- [ ] 更细化的 stream / iterator 使用边界说明
 
-> If you prefer English, open [README_EN.md](/mnt/c/project/local-collection/README_EN.md).
+## 英文版
+
+> For English documentation, open [README_EN.md](/mnt/c/project/local-collection/README_EN.md).
 
