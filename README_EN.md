@@ -48,8 +48,16 @@ A lightweight local-backed alternative to `List` / `Map` that stores data in an 
 - Supported: `add`, `addAll`, `remove(index)`, `clear`, `get`, `set`, `size`, `isEmpty`, `iterator`, `listIterator`, `subList`, `pk(index)`.
 - Explicitly unsupported (`UnsupportedOperationException`):
   - `contains`, `toArray`, `remove(Object)`, `containsAll`, `add(index, E)`, `removeAll`, `retainAll`, `indexOf`, `lastIndexOf`, etc.
+- Alternatives:
+  - For full-list membership checks, use external filtering or explicit DB-side query through `LocalMap`/`subList` pipelines.
+  - For element replacement by value, use `indexOf`-equivalent in a temporary iterator loop and then `set(index, value)`.
+  - For positional list semantics that require shifts on insert/delete in the middle, avoid direct `LocalList` usage.
 - Important: mutating objects returned by `get` is **not** auto-persisted; call `set(index, value)` to write back.
 - `subList` is immutable (`Collections.unmodifiableList`) when reading from DB path.
+- Stream usage boundary:
+  - `stream()` and `parallelStream()` are available through `List` default methods.
+  - These are **read-oriented traversal** paths; heavy stream processing should prefer `iterator()` or `listIterator()` to avoid surprising DB access patterns.
+  - Do not rely on short-circuit side effects from stream terminals to sync cached in-memory state with the database.
 
 ### LocalMap
 
@@ -244,11 +252,11 @@ This keeps each compound operation locked only for the smallest required scope w
 - [x] Startup cleanup and app-level directory isolation
 - [x] Iterator prefetch strategy (`preReadCacheSize = 5000`)
 - [ ] Extend operational documentation and deployment guidance
-- [ ] Clarify stream usage boundaries
+- [x] Clarify stream usage boundaries
 - [ ] Add SQL dialect compatibility layer for `LocalMap` grouping expressions (SQLite/H2)
 - [ ] Add atomic composite operations for concurrent use (`putIfAbsent`, `computeIfAbsent`, `removeIfEquals`)
-- [ ] Expand `LocalList`/`LocalMap` supported APIs and document intentional non-supports with alternatives
-- [ ] Add observable runtime metrics (cache hit rate, cache size, flush count/time, db size)
+- [x] Expand `LocalList`/`LocalMap` supported APIs and document intentional non-supports with alternatives
+- [x] Add observable runtime metrics (cache hit rate, cache size, flush count/time, db size)
 - [ ] Add failure recovery strategy for DB corruption / partial writes / abnormal shutdown
 - [ ] Add configurable write strategy controls (flush interval, flush chunk size, index/create flags)
 - [ ] Add snapshot/import/export support (JSON/CSV) and backup restore workflow

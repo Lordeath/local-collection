@@ -35,6 +35,7 @@ public class LocalListTest {
         testDbIteratorAndListIterator();
         testSubListDbValidation();
         testPkWithRemoveFlag();
+        testRuntimeMetrics();
     }
 
     @SuppressWarnings("ConstantValue")
@@ -149,8 +150,7 @@ public class LocalListTest {
             }
             assertEquals(100, list.subList(0, 100).size());
             for (TestBean1 testBean1 : list.subList(0, 100)) {
-                log.debug("正在�
-存遍历: {}", testBean1);
+                log.debug("sublist iterating: {}", testBean1);
             }
             assertEquals(99, list.subList(1, 100).size());
             assertEquals(1, list.subList(1, 100).get(0).age);
@@ -417,6 +417,48 @@ public class LocalListTest {
                 assertEquals(2, list.size());
                 assertEquals(1, list.pk(0));
                 assertEquals(3, list.pk(1));
+            }
+        });
+    }
+
+    private static void testRuntimeMetrics() {
+        withCacheSize(2, () -> {
+            try (LocalList<String> list = new LocalList<>(String.class)) {
+                var metrics = list.getRuntimeMetrics();
+                assertEquals(0, metrics.getCacheHitCount());
+                assertEquals(0, metrics.getCacheMissCount());
+                assertEquals(0, metrics.getCacheWriteCount());
+                assertEquals(0, metrics.getCacheFlushCount());
+                assertEquals(0, metrics.getDatabaseWriteOps());
+
+                list.add("a");
+                list.add("b");
+                assertEquals(2, metrics.getCacheWriteCount());
+                assertEquals(2, metrics.getDatabaseSize());
+
+                assertEquals("a", list.get(0));
+                assertEquals("b", list.get(1));
+                assertEquals(2, metrics.getCacheHitCount());
+                assertEquals(0, metrics.getCacheMissCount());
+
+                list.add("c");
+                assertEquals(1, metrics.getCacheFlushCount());
+                assertEquals(3, metrics.getDatabaseSize());
+                assertTrue(metrics.getCacheFlushTotalNanos() >= 0);
+                assertEquals(2, metrics.getDatabaseWriteOps());
+
+                assertEquals("a", list.get(0));
+                assertEquals("b", list.get(1));
+                assertEquals("c", list.get(2));
+                assertEquals(2, metrics.getCacheMissCount());
+
+                assertEquals("b", list.set(1, "bb"));
+                assertEquals(3, metrics.getCacheWriteCount());
+                assertEquals(3, metrics.getDatabaseWriteOps());
+
+                list.remove(2);
+                assertEquals(2, list.size());
+                assertEquals(4, metrics.getDatabaseWriteOps());
             }
         });
     }
