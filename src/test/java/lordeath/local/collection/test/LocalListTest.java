@@ -39,6 +39,7 @@ public class LocalListTest {
         testPkWithRemoveFlag();
         testRuntimeMetrics();
         testSnapshotImportExport();
+        testRecoveryStateApi();
     }
 
     @SuppressWarnings("ConstantValue")
@@ -535,6 +536,18 @@ public class LocalListTest {
                 Files.deleteIfExists(json);
             } catch (Exception e) {
                 throw new RuntimeException(e);
+            }
+        });
+    }
+
+    private static void testRecoveryStateApi() {
+        withCacheSize(0, () -> {
+            try (LocalList<String> list = new LocalList<>(String.class)) {
+                assertFalse(list.isRecoveryRequired());
+                list.add("a");
+                assertFalse(list.isRecoveryRequired());
+                list.recoveryComplete();
+                assertFalse(list.isRecoveryRequired());
             }
         });
     }

@@ -135,6 +135,18 @@ public final class SynchronizedLocalList<E> implements List<E>, AutoCloseable {
         }
     }
 
+    public boolean isRecoveryRequired() {
+        synchronized (mutex) {
+            return delegate.isRecoveryRequired();
+        }
+    }
+
+    public void recoveryComplete() {
+        synchronized (mutex) {
+            delegate.recoveryComplete();
+        }
+    }
+
     public void exportToJson(File snapshotFile) {
         synchronized (mutex) {
             delegate.exportToJson(snapshotFile);

@@ -276,6 +276,7 @@ This keeps each compound operation locked only for the smallest required scope w
   - If inserts appear missing after crash, verify cache flushing on close and reopen, then replay startup initialization.
   - If query/read path is slow, check index creation flag and inspect query plan before scaling.
   - If tables fail to initialize, confirm workspace path ownership and remove stale tables only with a maintenance window.
+  - If `isRecoveryRequired()` returns true at startup, it usually means a previous flush was interrupted or the DB may be inconsistent; import from a known-good JSON/CSV snapshot and call `recoveryComplete()` after verification.
 
 ## Roadmap
 
@@ -290,7 +291,7 @@ This keeps each compound operation locked only for the smallest required scope w
 - [x] Add atomic composite operations for concurrent use (`putIfAbsent`, `computeIfAbsent`, `removeIfEquals`)
 - [x] Expand `LocalList`/`LocalMap` supported APIs and document intentional non-supports with alternatives
 - [x] Add observable runtime metrics (cache hit rate, cache size, flush count/time, db size)
-- [ ] Add failure recovery strategy for DB corruption / partial writes / abnormal shutdown
+- [x] Add failure recovery strategy for DB corruption / partial writes / abnormal shutdown
 - [x] Add configurable write strategy controls (flush interval, flush chunk size, index/create flags)
 - [x] Add snapshot/import/export support (JSON/CSV) and backup restore workflow
 - [ ] Add pluggable serialization path for non-native types (e.g. JSON serializer)

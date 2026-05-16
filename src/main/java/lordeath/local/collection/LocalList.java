@@ -14,6 +14,11 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.lang.ref.Cleaner;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -76,6 +81,11 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * 运行时指标
      */
     private final LocalListRuntimeMetrics runtimeMetrics = new LocalListRuntimeMetrics();
+    private volatile boolean recoveryRequired = false;
+    private static final String RECOVERY_TABLE_PREFIX = "lc_recovery_";
+    private static final String RECOVERY_STATE_NORMAL = "NORMAL";
+    private static final String RECOVERY_STATE_FLUSHING = "FLUSHING";
+    private static final String RECOVERY_STATE_CORRUPTED = "CORRUPTED";
     /**
      * 缓存持久化计数器
      */
@@ -139,6 +149,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         // map不进行缓存，直接使用db的数据
         cacheSize = 0;
         cache = new ArrayList<>(cacheSize);
+        initRecoveryState();
     }
 
     /**
@@ -151,6 +162,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         String tableName = databaseOpt.getTableName();
         DataSource dataSource = databaseOpt.getDataSource();
         cleanable = cleaner.register(this, () -> DBUtil.drop(tableName, dataSource));
+        initRecoveryState();
     }
 
     /**
@@ -160,8 +172,11 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     public void close() {
         try {
             restoreCacheToDB();
-            Optional.ofNullable(databaseOpt).ifPresent(IDatabaseOpt::close);
+            recoveryComplete();
         } catch (Throwable ignored) {
+            markRecoveryState(RECOVERY_STATE_CORRUPTED, "close-failed");
+        } finally {
+            Optional.ofNullable(databaseOpt).ifPresent(IDatabaseOpt::close);
         }
     }
 
@@ -412,6 +427,60 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         sizeCounter.set(0);
         cacheToDBFlag = false;
         runtimeMetrics.recordDatabaseSize(0);
+        recoveryComplete();
+    }
+
+    /**
+     * 当前实例是否需要恢复处理。
+     *
+     * @return true 表示检测到非正常关闭或上次刷新未完成
+     */
+    public boolean isRecoveryRequired() {
+        return recoveryRequired;
+    }
+
+    /**
+     * 将当前实例标记为恢复完成。恢复流程一般在读取快照并恢复后调用。
+     */
+    public void recoveryComplete() {
+        markRecoveryState(RECOVERY_STATE_NORMAL, "recovery-complete");
+        recoveryRequired = false;
+    }
+
+    private String getRecoveryTableName() {
+        if (databaseOpt == null) {
+            return null;
+        }
+        return RECOVERY_TABLE_PREFIX + databaseOpt.getTableName();
+    }
+
+    private void initRecoveryState() {
+        if (databaseOpt == null) {
+            return;
+        }
+        try {
+            String tableName = getRecoveryTableName();
+            DataSource dataSource = databaseOpt.getDataSource();
+            try (Connection connection = dataSource.getConnection();
+                 Statement statement = connection.createStatement()) {
+                statement.execute("create table if not exists " + tableName
+                        + " (id integer primary key, state varchar(64), updated_at bigint, detail varchar(255))");
+                statement.execute("INSERT INTO " + tableName
+                        + " (id, state, updated_at, detail) "
+                        + "SELECT 1, '" + RECOVERY_STATE_NORMAL + "', " + System.currentTimeMillis() + ", '' "
+                        + "WHERE NOT EXISTS (SELECT 1 FROM " + tableName + " WHERE id = 1)");
+            }
+            String state = readRecoveryState();
+            if (!RECOVERY_STATE_NORMAL.equals(state)) {
+                recoveryRequired = true;
+                log.warn("检测到异常恢复状态，table={} state={}", databaseOpt.getTableName(), state);
+            } else {
+                recoveryRequired = false;
+            }
+        } catch (Throwable e) {
+            recoveryRequired = true;
+            log.error("恢复状态初始化失败，table={}", databaseOpt.getTableName(), e);
+        }
     }
 
     /**
@@ -643,6 +712,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         if (cache.isEmpty()) {
             return;
         }
+        markRecoveryState(RECOVERY_STATE_FLUSHING, "flush-start");
         cacheToDBFlag = true;
         int flushSize = cache.size();
         int chunk = MainConfig.CACHE_FLUSH_CHUNK_SIZE.getPropertyInt();
@@ -650,14 +720,21 @@ public class LocalList<T> implements AutoCloseable, List<T> {
             chunk = flushSize;
         }
         long start = System.nanoTime();
-        for (int i = 0; i < cache.size(); i += chunk) {
-            int end = Math.min(cache.size(), i + chunk);
-            databaseOpt.addAll(cache.subList(i, end));
+        try {
+            for (int i = 0; i < cache.size(); i += chunk) {
+                int end = Math.min(cache.size(), i + chunk);
+                databaseOpt.addAll(cache.subList(i, end));
+            }
+            cache.clear();
+            runtimeMetrics.recordCacheFlush(flushSize, System.nanoTime() - start);
+            runtimeMetrics.recordDatabaseWrite(flushSize);
+            runtimeMetrics.recordDatabaseSize(sizeCounter.get());
+            markRecoveryState(RECOVERY_STATE_NORMAL, "flush-complete");
+        } catch (Throwable e) {
+            markRecoveryState(RECOVERY_STATE_CORRUPTED, "flush-failed");
+            recoveryRequired = true;
+            throw e;
         }
-        cache.clear();
-        runtimeMetrics.recordCacheFlush(flushSize, System.nanoTime() - start);
-        runtimeMetrics.recordDatabaseWrite(flushSize);
-        runtimeMetrics.recordDatabaseSize(sizeCounter.get());
         lastFlushMillis = System.currentTimeMillis();
 //        cacheToDBFlag.set(true);
 //        cacheToDBCounter.incrementAndGet();
@@ -675,6 +752,59 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         long now = System.currentTimeMillis();
         if (now - lastFlushMillis >= interval) {
             restoreCacheToDB();
+        }
+    }
+
+    private void markRecoveryState(String state, String detail) {
+        if (databaseOpt == null) {
+            return;
+        }
+        String tableName = getRecoveryTableName();
+        try (Connection connection = databaseOpt.getDataSource().getConnection();
+             PreparedStatement query = connection.prepareStatement("select 1 from " + tableName + " where id = 1");
+             ResultSet resultSet = query.executeQuery()) {
+            if (resultSet.next()) {
+                try (PreparedStatement update = connection.prepareStatement(
+                        "update " + tableName + " set state = ?, updated_at = ?, detail = ? where id = 1")) {
+                    update.setString(1, state);
+                    update.setLong(2, System.currentTimeMillis());
+                    update.setString(3, detail);
+                    update.executeUpdate();
+                }
+            } else {
+                try (PreparedStatement insert = connection.prepareStatement(
+                        "insert into " + tableName + " (id, state, updated_at, detail) values (1, ?, ?, ?)")) {
+                    insert.setString(1, state);
+                    insert.setLong(2, System.currentTimeMillis());
+                    insert.setString(3, detail);
+                    insert.executeUpdate();
+                }
+            }
+            if (RECOVERY_STATE_CORRUPTED.equals(state) || RECOVERY_STATE_FLUSHING.equals(state)) {
+                recoveryRequired = true;
+            } else if (RECOVERY_STATE_NORMAL.equals(state)) {
+                recoveryRequired = false;
+            }
+        } catch (SQLException ignored) {
+            recoveryRequired = true;
+        }
+    }
+
+    private String readRecoveryState() {
+        if (databaseOpt == null) {
+            return RECOVERY_STATE_CORRUPTED;
+        }
+        String tableName = getRecoveryTableName();
+        try (Connection connection = databaseOpt.getDataSource().getConnection();
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery("select state from " + tableName + " where id = 1")) {
+            if (resultSet.next()) {
+                String state = resultSet.getString(1);
+                return state == null ? RECOVERY_STATE_NORMAL : state;
+            }
+            return RECOVERY_STATE_NORMAL;
+        } catch (SQLException e) {
+            return RECOVERY_STATE_CORRUPTED;
         }
     }
 

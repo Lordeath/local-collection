@@ -244,6 +244,7 @@ public final class LocalCollectionConcurrencyKit {
 故障处理建议：
 - 若出现“部分写入丢失”疑似现象，确认关闭路径是否被触发，关注是否命中 flush.interval/flush.chunk.size 配置并观察 metrics。
 - 若表初始化失败，先核验 workspace（应用名）隔离是否正确，再在维护窗口处理遗留文件。
+- 若实例启动后 `isRecoveryRequired()` 为 true，通常说明上次刷盘未完整结束或恢复状态异常，请优先使用可确认完好的快照恢复，并在确认后调用 `recoveryComplete()`。
 - 若出现异常中断后重启不可恢复，请先保留数据文件再开启 debug 级别日志收集。
 
 ## 后续计划
@@ -259,7 +260,7 @@ public final class LocalCollectionConcurrencyKit {
 - [ ] 增加并发场景下可用的复合原子方法（如 `putIfAbsent`、`computeIfAbsent`、`removeIfEquals`）
 - [ ] 扩展 `LocalList`/`LocalMap` 常用 API 覆盖，并明确不支持方法的替代路径
 - [ ] 增加运行时可观测指标（缓存命中率、缓存大小、刷库次数/耗时、数据库文件大小）
-- [ ] 增加异常场景恢复能力（数据库文件损坏、异常写入中断、异常退出后的恢复）
+- [x] 增加异常场景恢复能力（数据库文件损坏、异常写入中断、异常退出后的恢复）
 - [ ] 增加可配置写入策略（刷库时间阈值、刷库批量大小、索引创建策略）
 - [x] 增加快照导入导出（JSON/CSV）与备份恢复流程
 - [ ] 支持非内置类型的可插拔序列化方案（例如 JSON 序列化）
