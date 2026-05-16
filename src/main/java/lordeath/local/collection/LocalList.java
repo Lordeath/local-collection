@@ -63,6 +63,10 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     private final AtomicInteger sizeCounter = new AtomicInteger(0);
     /**
+     * 运行时指标
+     */
+    private final LocalListRuntimeMetrics runtimeMetrics = new LocalListRuntimeMetrics();
+    /**
      * 缓存持久化计数器
      */
 //    private final AtomicInteger cacheToDBCounter = new AtomicInteger(0);
@@ -106,6 +110,14 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      * @param tableName     表名
      * @param columnsForMap 列映射定义
      */
+    /**
+     * 获取运行时指标对象。
+     *
+     * @return 运行时指标
+     */
+    public LocalListRuntimeMetrics getRuntimeMetrics() {
+        return runtimeMetrics;
+    }
     public LocalList(Class<T> clazz, String tableName, List<LocalColumnForMap> columnsForMap) {
         this.columns = columnsForMap.stream().map(LocalColumnForMap::getSinkColumn).collect(Collectors.toList());
 
@@ -246,6 +258,8 @@ public class LocalList<T> implements AutoCloseable, List<T> {
             boolean b = databaseOpt.add(t);
             if (b) {
                 sizeCounter.incrementAndGet();
+                runtimeMetrics.recordDatabaseWrite(1);
+                runtimeMetrics.recordDatabaseSize(sizeCounter.get());
             }
             return b;
         }
@@ -255,6 +269,8 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         boolean b = cache.add(t);
         if (b) {
             sizeCounter.incrementAndGet();
+            runtimeMetrics.recordCacheWrite();
+            runtimeMetrics.recordDatabaseSize(sizeCounter.get());
         }
         return b;
     }
@@ -317,6 +333,8 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         }
         if (b) {
             sizeCounter.addAndGet(c.size());
+            runtimeMetrics.recordCacheWrite(c.size());
+            runtimeMetrics.recordDatabaseSize(sizeCounter.get());
         }
         return b;
     }
@@ -325,6 +343,8 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         boolean b = databaseOpt.addAll(c);
         if (b) {
             sizeCounter.addAndGet(c.size());
+            runtimeMetrics.recordDatabaseWrite(c.size());
+            runtimeMetrics.recordDatabaseSize(sizeCounter.get());
         }
         return b;
     }
@@ -375,6 +395,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         databaseOpt.clear();
         sizeCounter.set(0);
         cacheToDBFlag = false;
+        runtimeMetrics.recordDatabaseSize(0);
     }
 
     /**
@@ -387,10 +408,14 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     public T get(int index) {
         boolean b = cacheSize > 0 && !cacheToDBFlag;
         if (b) {
-            return cache.get(index);
+            T t = cache.get(index);
+            runtimeMetrics.recordCacheHit();
+            return t;
         }
         restoreCacheToDB();
-        return databaseOpt.get(index, removeFlag.get());
+        T t = databaseOpt.get(index, removeFlag.get());
+        runtimeMetrics.recordCacheMiss();
+        return t;
     }
 
     /**
@@ -404,10 +429,17 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     public T set(int index, T element) {
         boolean b = cacheSize > 0 && !cacheToDBFlag;
         if (b) {
-            return cache.set(index, element);
+            T t = cache.set(index, element);
+            runtimeMetrics.recordCacheWrite();
+            return t;
         }
         restoreCacheToDB();
-        return databaseOpt.set(index, element);
+        T t = databaseOpt.set(index, element);
+        if (t != null) {
+            runtimeMetrics.recordDatabaseWrite(1);
+            runtimeMetrics.recordDatabaseSize(sizeCounter.get());
+        }
+        return t;
     }
 
     /**
@@ -431,7 +463,9 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     public T remove(int index) {
         boolean b = cacheSize > 0 && !cacheToDBFlag;
         if (b) {
+            runtimeMetrics.recordCacheWrite();
             sizeCounter.decrementAndGet();
+            runtimeMetrics.recordDatabaseSize(sizeCounter.get());
             return cache.remove(index);
         }
         restoreCacheToDB();
@@ -439,6 +473,8 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         T t = databaseOpt.remove(index);
         if (t != null) {
             sizeCounter.decrementAndGet();
+            runtimeMetrics.recordDatabaseWrite(1);
+            runtimeMetrics.recordDatabaseSize(sizeCounter.get());
         }
         return t;
     }
@@ -543,9 +579,11 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         restoreCacheToDB();
         AtomicBoolean removed = new AtomicBoolean(false);
         T t = databaseOpt.putByKey(keyColumn, key, value, removed);
+        runtimeMetrics.recordDatabaseWrite(1);
         if (!removed.get()) {
             // 新加的元素，计数+1
             sizeCounter.incrementAndGet();
+            runtimeMetrics.recordDatabaseSize(sizeCounter.get());
         }
         return t;
     }
@@ -561,6 +599,8 @@ public class LocalList<T> implements AutoCloseable, List<T> {
         boolean b = databaseOpt.removeByKey(keyColumn, key);
         if (b) {
             sizeCounter.decrementAndGet();
+            runtimeMetrics.recordDatabaseWrite(1);
+            runtimeMetrics.recordDatabaseSize(sizeCounter.get());
         }
     }
 
@@ -575,18 +615,26 @@ public class LocalList<T> implements AutoCloseable, List<T> {
      */
     void insertGroupedData(String tableName, String newTableName, List<String> groupByColumns, String whereClause, List<LocalColumnForMap> columnForMapList) {
         restoreCacheToDB();
+        int before = sizeCounter.get();
         databaseOpt.insertGroupedData(tableName, newTableName, groupByColumns, whereClause, columnForMapList);
         // 刷新计数器
         sizeCounter.set(databaseOpt.size());
+        runtimeMetrics.recordDatabaseWrite(Math.max(0, sizeCounter.get() - before));
+        runtimeMetrics.recordDatabaseSize(sizeCounter.get());
     }
 
     void restoreCacheToDB() {
-        cacheToDBFlag = true;
         if (cache.isEmpty()) {
             return;
         }
+        cacheToDBFlag = true;
+        int flushSize = cache.size();
+        long start = System.nanoTime();
         databaseOpt.addAll(cache);
         cache.clear();
+        runtimeMetrics.recordCacheFlush(flushSize, System.nanoTime() - start);
+        runtimeMetrics.recordDatabaseWrite(flushSize);
+        runtimeMetrics.recordDatabaseSize(sizeCounter.get());
 //        cacheToDBFlag.set(true);
 //        cacheToDBCounter.incrementAndGet();
 //        cacheToDBCounter.get();
