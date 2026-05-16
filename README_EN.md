@@ -182,6 +182,8 @@ static void putIfAbsentUnderLock(SynchronizedLocalMap<String, String> map, Strin
 }
 ```
 
+Note: `putIfAbsent`, `compute`, `computeIfAbsent`, and `merge` should still be treated as composite operations. In complex concurrent cases, wrap your own critical section with the shared mutex to avoid race conditions with compound logic.
+
 ## Roadmap
 
 - [x] `LocalList` to `LocalMap` aggregation path

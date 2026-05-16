@@ -181,6 +181,8 @@ static void putIfAbsentUnderLock(SynchronizedLocalMap<String, String> map, Strin
 }
 ```
 
+注意：`putIfAbsent`、`compute`、`computeIfAbsent`、`merge` 等默认方法虽然可用，但在语义上仍属于复合操作，复杂并发场景下建议按你的业务规则显式加锁处理，避免和持久化/数据库路径切换相关的竞态。
+
 ## 后续计划
 
 - [x] `LocalList` 转 `LocalMap` 聚合链路
