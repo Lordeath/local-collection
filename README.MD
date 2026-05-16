@@ -136,5 +136,4 @@ try (LocalMap<String, Bean> map = LocalMap.from(sourceList)
 
 ## 英文版
 
-> For English documentation, open [README_EN.md](/mnt/c/project/local-collection/README_EN.md).
-
+> For English documentation, open [README_EN.md](README_EN.md).
