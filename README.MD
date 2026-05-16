@@ -9,7 +9,7 @@
 - 实际数据库操作由 `IDatabaseOpt` 抽象，底层由 `DatabaseFactory` 选择实现：`sqlite`（默认）或 `h2`。
 - 线程模型：当前实现声明为线程不安全（`not thread-safe`）。
 
-## 运行机制（按源码）
+## 运行机制
 
 - `LocalList` 首次使用时会按元素类型初始化数据库表结构（`init`）。
 - `cacheSize` 通过 `lordeath.local.collection.cache.size` 控制（默认 `10000`）。
@@ -39,7 +39,7 @@
 
 > `MainConfig` 的配置解析优先级为：`System.getProperty` → `System.getenv` → 默认值。
 
-## API 覆盖与行为（按源码）
+## API 覆盖与行为
 
 ### LocalList（部分 `List`）
 
@@ -124,7 +124,7 @@ try (LocalMap<String, Bean> map = LocalMap.from(sourceList)
 }
 ```
 
-## 后续计划（对齐代码方向）
+## 后续计划
 
 - [x] `LocalList` 转 `LocalMap` 聚合链路
 - [x] `LocalMap` 数据库落盘实现

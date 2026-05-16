@@ -11,7 +11,7 @@ A lightweight local-backed alternative to `List` / `Map` that stores data in an 
   - `h2`
 - Thread-safety: current implementation is **not thread-safe**.
 
-## Runtime behavior (from source logic)
+## Runtime behavior
 
 - `LocalList` initializes DB table metadata on first use (`init`) based on the element type.
 - `cacheSize` is controlled by `lordeath.local.collection.cache.size` (default `10000`).
