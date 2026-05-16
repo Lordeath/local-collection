@@ -169,6 +169,18 @@ try {
 
 如果你有更高并发写入压力，建议评估更高层的分片或队列化写入策略，而不是只靠大粒度全局锁去解决吞吐瓶颈。
 
+推荐用一个明确命名的小函数包住复合逻辑，避免重复散落锁：
+
+```java
+static void putIfAbsentUnderLock(SynchronizedLocalMap<String, String> map, String key, String value) {
+  synchronized (map.getMutex()) {
+    if (!map.containsKey(key)) {
+      map.put(key, value);
+    }
+  }
+}
+```
+
 ## 后续计划
 
 - [x] `LocalList` 转 `LocalMap` 聚合链路

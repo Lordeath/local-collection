@@ -170,6 +170,18 @@ try {
 
 If you have heavy concurrent writes, consider sharding or write-queueing at a higher level instead of relying only on coarse global locking.
 
+Prefer wrapping compound logic in a dedicated helper to keep lock scope explicit and stable:
+
+```java
+static void putIfAbsentUnderLock(SynchronizedLocalMap<String, String> map, String key, String value) {
+  synchronized (map.getMutex()) {
+    if (!map.containsKey(key)) {
+      map.put(key, value);
+    }
+  }
+}
+```
+
 ## Roadmap
 
 - [x] `LocalList` to `LocalMap` aggregation path
