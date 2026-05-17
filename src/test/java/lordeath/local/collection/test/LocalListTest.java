@@ -31,6 +31,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @Slf4j
 public class LocalListTest {
     private static final String CACHE_SIZE_KEY = "lordeath.local.collection.cache.size";
+    private static final String CACHE_FLUSH_INTERVAL_MILLIS_KEY = "lordeath.local.collection.cache.flush.interval.millis";
+    private static final String CACHE_FLUSH_CHUNK_SIZE_KEY = "lordeath.local.collection.cache.flush.chunk.size";
 
     public static void testCases() {
         testList();
@@ -41,6 +43,8 @@ public class LocalListTest {
         testSubListDbValidation();
         testPkWithRemoveFlag();
         testRuntimeMetrics();
+        testRuntimeMetricsWithDirectDatabaseWrites();
+        testRuntimeMetricsWithFlushIntervalAndChunkConfig();
         testSnapshotImportExport();
         testPluggableSerialization();
         testRecoveryStateApi();
@@ -487,14 +491,75 @@ public class LocalListTest {
                 assertEquals(3, metrics.getCacheMissCount());
 
                 assertEquals("b", list.set(1, "bb"));
-            assertEquals(3, metrics.getCacheWriteCount());
-            assertEquals(3, metrics.getDatabaseWriteOps());
+                assertEquals(3, metrics.getCacheWriteCount());
+                assertEquals(3, metrics.getDatabaseWriteOps());
 
-            list.remove(2);
-            assertEquals(2, list.size());
-            assertEquals(4, metrics.getDatabaseWriteOps());
+                list.remove(2);
+                assertEquals(2, list.size());
+                assertEquals(4, metrics.getDatabaseWriteOps());
             }
         });
+    }
+
+    private static void testRuntimeMetricsWithDirectDatabaseWrites() {
+        withCacheSize(0, () -> {
+            try (LocalList<String> list = new LocalList<>(String.class)) {
+                var metrics = list.getRuntimeMetrics();
+
+                list.add("a");
+                list.add("b");
+
+                assertEquals(0, metrics.getCacheWriteCount());
+                assertEquals(0, metrics.getCacheFlushCount());
+                assertEquals(2, metrics.getDatabaseWriteOps());
+                assertEquals(2, metrics.getDatabaseWriteRows());
+                assertEquals(2, metrics.getDatabaseSize());
+
+                assertEquals("a", list.get(0));
+                assertEquals("b", list.get(1));
+                assertEquals(0, metrics.getCacheHitCount());
+                assertEquals(2, metrics.getCacheMissCount());
+                assertEquals(0D, metrics.getCacheHitRate());
+
+                assertEquals("a", list.set(0, "aa"));
+                assertEquals(3, metrics.getDatabaseWriteOps());
+                assertEquals(3, metrics.getDatabaseWriteRows());
+                assertEquals(2, metrics.getDatabaseSize());
+
+                assertEquals("b", list.remove(1));
+                assertEquals(4, metrics.getDatabaseWriteOps());
+                assertEquals(4, metrics.getDatabaseWriteRows());
+                assertEquals(1, metrics.getDatabaseSize());
+            }
+        });
+    }
+
+    private static void testRuntimeMetricsWithFlushIntervalAndChunkConfig() {
+        withCacheSize(10, () -> withSystemProperty(CACHE_FLUSH_CHUNK_SIZE_KEY, "2", () -> {
+            try (LocalList<String> list = new LocalList<>(String.class)) {
+                var metrics = list.getRuntimeMetrics();
+
+                list.add("a");
+                list.add("b");
+                list.add("c");
+                setLastFlushMillis(list, System.currentTimeMillis() - 10);
+
+                withSystemProperty(CACHE_FLUSH_INTERVAL_MILLIS_KEY, "1", () -> list.add("d"));
+
+                assertEquals(4, metrics.getCacheWriteCount());
+                assertEquals(1, metrics.getCacheFlushCount());
+                assertEquals(1, metrics.getDatabaseWriteOps());
+                assertEquals(3, metrics.getDatabaseWriteRows());
+                assertEquals(4, metrics.getDatabaseSize());
+
+                assertEquals("a", list.get(0));
+                assertEquals(2, metrics.getCacheFlushCount());
+                assertEquals(2, metrics.getDatabaseWriteOps());
+                assertEquals(4, metrics.getDatabaseWriteRows());
+                assertEquals(1, metrics.getCacheMissCount());
+                assertEquals(0D, metrics.getCacheHitRate());
+            }
+        }));
     }
 
     private static void testSnapshotImportExport() {
@@ -616,16 +681,28 @@ public class LocalListTest {
     }
 
     private static void withCacheSize(int cacheSize, Runnable runnable) {
-        String old = System.getProperty(CACHE_SIZE_KEY);
-        System.setProperty(CACHE_SIZE_KEY, String.valueOf(cacheSize));
+        withSystemProperty(CACHE_SIZE_KEY, String.valueOf(cacheSize), runnable);
+    }
+
+    private static void withSystemProperty(String key, String value, Runnable runnable) {
+        String old = System.getProperty(key);
+        System.setProperty(key, value);
         try {
             runnable.run();
         } finally {
             if (old == null) {
-                System.clearProperty(CACHE_SIZE_KEY);
+                System.clearProperty(key);
             } else {
-                System.setProperty(CACHE_SIZE_KEY, old);
+                System.setProperty(key, old);
             }
+        }
+    }
+
+    private static void setLastFlushMillis(LocalList<?> list, long lastFlushMillis) {
+        try {
+            FieldUtils.writeField(list, "lastFlushMillis", lastFlushMillis, true);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
         }
     }
 
