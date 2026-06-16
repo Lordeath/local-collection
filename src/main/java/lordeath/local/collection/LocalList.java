@@ -427,7 +427,9 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     @Override
     public void clear() {
         cache.clear();
-        databaseOpt.clear();
+        if (databaseOpt != null) {
+            databaseOpt.clear();
+        }
         sizeCounter.set(0);
         removeFlag.set(true);
         cacheToDBFlag = false;
@@ -603,6 +605,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     @SuppressWarnings("NullableProblems")
     @Override
     public ListIterator<T> listIterator() {
+        restoreCacheToDB();
         return new LocalListIterator();
     }
 
@@ -615,6 +618,7 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     @SuppressWarnings("NullableProblems")
     @Override
     public ListIterator<T> listIterator(int index) {
+        restoreCacheToDB();
         return new LocalListIterator(index);
     }
 
@@ -1073,6 +1077,8 @@ public class LocalList<T> implements AutoCloseable, List<T> {
             parsed = raw.isEmpty() ? null : raw.charAt(0);
         } else if (targetType == Date.class) {
             parsed = new Date(Long.parseLong(raw));
+        } else if (targetType == java.sql.Date.class) {
+            parsed = new java.sql.Date(Long.parseLong(raw));
         } else if (targetType == BigDecimal.class) {
             parsed = new BigDecimal(raw);
         } else {
@@ -1334,12 +1340,13 @@ public class LocalList<T> implements AutoCloseable, List<T> {
     }
 
     private final int preReadCacheSize = 5000;
-    private List<T> preReadCache = new ArrayList<>(preReadCacheSize);
 
     /**
      * 列表迭代器实现
      */
     private class LocalListIterator implements ListIterator<T> {
+        private final List<T> preReadCache = new ArrayList<>(preReadCacheSize);
+
         /**
          * 游标
          */
@@ -1373,24 +1380,35 @@ public class LocalList<T> implements AutoCloseable, List<T> {
          * @param index 索引
          */
         LocalListIterator(int index) {
-            if (index < 0 || index > size())
+            int currentSize = size();
+            if (index < 0 || index > currentSize)
                 throw new IndexOutOfBoundsException("Index: " + index);
             cursor = index;
-            // 初始化时预读数据
-            if (cursor < size()) {
-                preReadData();
+            if (cursor < currentSize) {
+                preReadDataContaining(cursor);
             }
         }
 
         /**
-         * 预读数据到缓存
+         * 预读包含指定索引的数据块到缓存
          */
-        private void preReadData() {
-            preReadStartIndex = cursor;
-            preReadEndIndex = Math.min(cursor + preReadCacheSize, size());
+        private void preReadDataContaining(int index) {
+            int currentSize = size();
+            if (index < 0 || index >= currentSize) {
+                preReadCache.clear();
+                preReadStartIndex = index;
+                preReadEndIndex = index;
+                return;
+            }
+            preReadStartIndex = (index / preReadCacheSize) * preReadCacheSize;
+            preReadEndIndex = Math.min(preReadStartIndex + preReadCacheSize, currentSize);
             List<T> batchData = databaseOpt.batchQuery(preReadStartIndex, preReadEndIndex);
             preReadCache.clear();
             preReadCache.addAll(batchData);
+        }
+
+        private boolean isInPreReadCache(int index) {
+            return index >= preReadStartIndex && index < preReadEndIndex;
         }
 
         /**
@@ -1415,8 +1433,8 @@ public class LocalList<T> implements AutoCloseable, List<T> {
             lastRet = cursor;
 
             // 如果当前游标不在预读缓存范围内，重新预读
-            if (cursor >= preReadEndIndex) {
-                preReadData();
+            if (!isInPreReadCache(cursor)) {
+                preReadDataContaining(cursor);
             }
 
             // 从预读缓存中获取数据
@@ -1445,8 +1463,8 @@ public class LocalList<T> implements AutoCloseable, List<T> {
             lastRet = --cursor;
 
             // 如果当前游标不在预读缓存范围内，重新预读
-            if (cursor < preReadStartIndex) {
-                preReadData();
+            if (!isInPreReadCache(cursor)) {
+                preReadDataContaining(cursor);
             }
 
             // 从预读缓存中获取数据
@@ -1482,7 +1500,10 @@ public class LocalList<T> implements AutoCloseable, List<T> {
                 throw new IllegalStateException();
 
             try {
-                LocalList.this.remove(lastRet);
+                T removed = LocalList.this.remove(lastRet);
+                if (removed == null) {
+                    throw new ConcurrentModificationException();
+                }
                 if (lastRet < cursor)
                     cursor--;
                 lastRet = -1;

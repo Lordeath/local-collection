@@ -37,6 +37,7 @@ public class LocalListTest {
     public static void testCases() {
         testList();
         testMap();
+        testEmptyClearAndIteratorCacheBoundary();
         testUnsupportedOperations();
         testAddAllBranches();
         testDbIteratorAndListIterator();
@@ -47,6 +48,7 @@ public class LocalListTest {
         testRuntimeMetricsWithFlushIntervalAndChunkConfig();
         testSnapshotImportExport();
         testPluggableSerialization();
+        testSqlDateAndBooleanSupport();
         testRecoveryStateApi();
     }
 
@@ -264,7 +266,7 @@ public class LocalListTest {
             assertEquals("2", map.get("b"));
             assertEquals("2", map.putIfAbsent("b", "3"));
 
-            assertNull(map.computeIfAbsent("c", (k) -> "4"));
+            assertEquals("4", map.computeIfAbsent("c", (k) -> "4"));
             assertEquals("4", map.get("c"));
             assertEquals("4", map.computeIfAbsent("c", (k) -> "5"));
 
@@ -301,6 +303,9 @@ public class LocalListTest {
             assertTrue(synchronizedMap.removeIfEquals("a", "1"));
             assertEquals(0, synchronizedMap.size());
             assertNull(synchronizedMap.get("a"));
+            assertEquals("4", synchronizedMap.computeIfAbsent("a", (k) -> "4"));
+            assertEquals("4", synchronizedMap.get("a"));
+            assertEquals("4", synchronizedMap.remove("a"));
             java.util.Map<String, String> syncBatch = new java.util.HashMap<>();
             syncBatch.put("a", "2");
             syncBatch.put("b", "1");
@@ -325,6 +330,42 @@ public class LocalListTest {
             assertEquals("1", synchronizedMap.get("b"));
         }
 
+    }
+
+    private static void testEmptyClearAndIteratorCacheBoundary() {
+        try (LocalList<String> list = new LocalList<>()) {
+            assertDoesNotThrow(list::clear);
+            assertEquals(0, list.size());
+            assertFalse(list.listIterator().hasNext());
+        }
+
+        try (LocalMap<String, String> map = new LocalMap<>()) {
+            assertDoesNotThrow(map::clear);
+            assertEquals(0, map.size());
+            assertTrue(map.isEmpty());
+        }
+
+        withCacheSize(10, () -> {
+            try (LocalList<String> list = new LocalList<>(String.class)) {
+                list.add("a");
+                list.add("b");
+                list.add("c");
+
+                ListIterator<String> lit = list.listIterator();
+                assertEquals("a", lit.next());
+                assertEquals("b", lit.next());
+                assertEquals("b", lit.previous());
+                assertEquals("b", lit.next());
+                assertEquals("c", lit.next());
+                assertFalse(lit.hasNext());
+
+                ListIterator<String> tail = list.listIterator(list.size());
+                assertEquals("c", tail.previous());
+                assertEquals("b", tail.previous());
+                assertEquals("a", tail.previous());
+                assertFalse(tail.hasPrevious());
+            }
+        });
     }
 
     private static void testUnsupportedOperations() {
@@ -668,6 +709,32 @@ public class LocalListTest {
         });
     }
 
+    private static void testSqlDateAndBooleanSupport() {
+        withCacheSize(0, () -> {
+            try (LocalList<DateBooleanBean> list = new LocalList<>(DateBooleanBean.class)) {
+                java.sql.Date birthday = java.sql.Date.valueOf("2020-01-02");
+                list.add(new DateBooleanBean(birthday, true, false));
+
+                DateBooleanBean fromDb = list.get(0);
+                assertEquals(birthday, fromDb.sqlDate);
+                assertTrue(fromDb.active);
+                assertFalse(fromDb.boxedActive);
+
+                Path json = Files.createTempFile("local-list-snapshot-date-boolean", ".json");
+                list.exportToJson(json.toFile());
+                list.clear();
+                list.importFromJson(json.toFile());
+                assertEquals(1, list.size());
+                assertEquals(birthday, list.get(0).sqlDate);
+                assertTrue(list.get(0).active);
+                assertFalse(list.get(0).boxedActive);
+                Files.deleteIfExists(json);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
     private static void testRecoveryStateApi() {
         withCacheSize(0, () -> {
             try (LocalList<String> list = new LocalList<>(String.class)) {
@@ -736,6 +803,15 @@ public class LocalListTest {
     public static class CustomTypeBean {
         private String name;
         private GeoPoint point;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class DateBooleanBean {
+        private java.sql.Date sqlDate;
+        private boolean active;
+        private Boolean boxedActive;
     }
 
     @Data

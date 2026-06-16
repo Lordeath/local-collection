@@ -316,12 +316,21 @@ public class DBUtil {
 
     private static Date convertObjectToDate(Object dateInDb) {
         Date date = null;
-        if (dateInDb instanceof Integer) {
-            date = new Date(((Integer) dateInDb));
-        } else if (dateInDb instanceof Long) {
-            date = new Date(((Long) dateInDb));
+        if (dateInDb instanceof Number) {
+            date = new Date(((Number) dateInDb).longValue());
         } else if (dateInDb instanceof Date) {
             date = (Date) dateInDb;
+        } else if (dateInDb instanceof CharSequence) {
+            String text = dateInDb.toString();
+            try {
+                date = new Date(Long.parseLong(text));
+            } catch (NumberFormatException ignored) {
+                try {
+                    date = Timestamp.valueOf(text);
+                } catch (IllegalArgumentException e) {
+                    date = java.sql.Date.valueOf(text);
+                }
+            }
         }
         return date;
     }
@@ -511,6 +520,9 @@ public class DBUtil {
             if (raw instanceof Boolean) {
                 return raw;
             }
+            if (raw instanceof Number) {
+                return ((Number) raw).intValue() != 0;
+            }
             return Boolean.valueOf(raw.toString());
         }
         if (targetType == Character.class || targetType == char.class) {
@@ -519,6 +531,10 @@ public class DBUtil {
         }
         if (targetType == Date.class) {
             return convertObjectToDate(raw);
+        }
+        if (targetType == java.sql.Date.class) {
+            Date date = convertObjectToDate(raw);
+            return date == null ? null : new java.sql.Date(date.getTime());
         }
         if (targetType == BigDecimal.class) {
             if (raw instanceof BigDecimal) {
@@ -635,7 +651,7 @@ public class DBUtil {
             return "FLOAT";
         } else if (Boolean.class.equals(javaType) || boolean.class.equals(javaType)) {
             return "BOOLEAN";
-        } else if (Date.class.equals(javaType)) {
+        } else if (Date.class.equals(javaType) || java.sql.Date.class.equals(javaType)) {
             return "TIMESTAMP";
         } else if (BigDecimal.class.equals(javaType)) {
             return "VARCHAR";

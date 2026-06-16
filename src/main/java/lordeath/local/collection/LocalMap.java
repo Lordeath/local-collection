@@ -189,6 +189,7 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
 
     @Override
     public V computeIfAbsent(K key, java.util.function.Function<? super K, ? extends V> mappingFunction) {
+        Objects.requireNonNull(mappingFunction, "mappingFunction is null");
         V existing = get(key);
         if (existing != null) {
             return existing;
@@ -197,7 +198,8 @@ public class LocalMap<K extends String, V> implements Map<K, V>, AutoCloseable {
         if (mapped == null) {
             return null;
         }
-        return putIfAbsent(key, mapped);
+        put(key, mapped);
+        return mapped;
     }
 
     public boolean removeIfEquals(Object key, Object value) {

@@ -82,10 +82,10 @@ public class ColumnNameUtil {
             case "char":
             case "java.lang.Character":
                 return new LocalColumn(fieldName, Character.class, "CHAR", field);
-            case "date":
-            case "java.sql.Date":
             case "java.util.Date":
                 return new LocalColumn(fieldName, Date.class, "DATETIME", field);
+            case "java.sql.Date":
+                return new LocalColumn(fieldName, java.sql.Date.class, "DATETIME", field);
             case "java.math.BigDecimal":
 //                return new LocalColumn(fieldName, BigDecimal.class, "decimal(32,8)", field);
                 return new LocalColumn(fieldName, BigDecimal.class, "VARCHAR", field);
