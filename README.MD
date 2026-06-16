@@ -111,7 +111,7 @@
 <dependency>
   <groupId>io.github.lordeath</groupId>
   <artifactId>local-collection</artifactId>
-  <version>1.0.20250306.1</version>
+  <version>1.0.20260616.1</version>
 </dependency>
 ```
 
